@@ -1,7 +1,7 @@
 name: Aggiorna dati EA
 on:
   schedule:
-    - cron: '*/20 17-23,0-3 * * *'
+    - cron: '17 4 * * *'
   workflow_dispatch:
 permissions:
   contents: write
