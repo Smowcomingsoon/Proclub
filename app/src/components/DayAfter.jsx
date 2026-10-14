@@ -8,6 +8,7 @@ import {
   buildTrials,
   buildTurningPoints,
 } from '../lib/newsroom.js';
+import { buildCoachComments } from '../lib/coach.js';
 import { buildSeasonProfile } from '../lib/season-profile.js';
 import { CoverStory } from './day-after/CoverStory.jsx';
 import { EditionBar } from './day-after/EditionBar.jsx';
@@ -22,7 +23,8 @@ import { TurningPoints } from './day-after/TurningPoints.jsx';
  * "Il giorno dopo": la gazzetta della serata scelta (copertina, svolte, processo
  * ai Pro, romanzo della stagione). `matches` è lo storico partite disponibile.
  */
-export function DayAfter({ members, matches }) {
+export function DayAfter({ members, matches, data }) {
+  const coach = useMemo(() => buildCoachComments(data), [data]);
   const nights = useMemo(() => groupByNight(matches), [matches]);
   const [nightChoice, setNightChoice] = useState('');
   const [protagonistChoice, setProtagonistChoice] = useState('');
@@ -33,7 +35,24 @@ export function DayAfter({ members, matches }) {
     () => summarizeNight(selectedNight?.games || []),
     [selectedNight],
   );
-  const trials = buildTrials(nightStats.players, selectedNight?.day || '');
+  const trials = buildTrials(nightStats.players, selectedNight?.day || '').map(
+    ({ player, trial }) => {
+      const verdict = coach.get(player.name.toLowerCase());
+      return verdict
+        ? {
+            player,
+            trial: {
+              ...trial,
+              praise: verdict.praise,
+              charge: verdict.charge,
+              proof: verdict.proof.join(' · '),
+              verdict: verdict.verdict,
+              coachNote: verdict.coachNote,
+            },
+          }
+        : { player, trial };
+    },
+  );
   const cover = buildCover(
     nightStats.players,
     nightStats.winners,

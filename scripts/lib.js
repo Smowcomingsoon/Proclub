@@ -33,7 +33,6 @@ function archiveMatches(dir, history, clubId) {
   }
   fs.mkdirSync(dir, {recursive: true});
   fs.writeFileSync(path.join(dir, 'index.json'), JSON.stringify(index));
-  fs.writeFileSync(path.join(dir, '..', '..', 'site', 'archive.json'), JSON.stringify(index));
   return index;
 }
 

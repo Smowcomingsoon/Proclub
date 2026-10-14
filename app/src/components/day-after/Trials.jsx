@@ -36,13 +36,15 @@ function TrialCard({ index, isCoverPro, nightQuotes, player, trial }) {
             {' ASSIST'}
           </span>
         </div>
-        <span className="paper-open-case">Leggi elogio e accusa</span>
+        <span className="paper-open-case">Leggi accusa e verdetto</span>
       </summary>
       <div className="paper-case-body">
-        <div className="paper-praise">
-          <span>L’ELOGIO</span>
-          <p>{trial.praise}</p>
-        </div>
+        {trial.praise && (
+          <div className="paper-praise">
+            <span>L’ELOGIO</span>
+            <p>{trial.praise}</p>
+          </div>
+        )}
         <blockquote>
           <span>L’ACCUSA DELLO SPOGLIATOIO</span>
           <Quote size={18} aria-hidden="true" />
@@ -74,6 +76,12 @@ function TrialCard({ index, isCoverPro, nightQuotes, player, trial }) {
             </div>
             <span>IL VERDETTO</span>
             <p>{trial.verdict}</p>
+            {trial.coachNote && (
+              <>
+                <span>LA NOTA DELL’ALLENATORE</span>
+                <p>{trial.coachNote}</p>
+              </>
+            )}
             <small>
               {'Reparti giocati: '}
               {player.roles
@@ -103,8 +111,8 @@ export function Trials({ nightQuotes, nightStats, trials }) {
           </h3>
         </div>
         <p>
-          Elogio, accusa e verdetto per tutti quelli scesi in campo. Le battute
-          sono nostre. Le cifre sono di EA.
+          Accusa, prove e verdetto per tutti quelli scesi in campo. L’elogio
+          si merita sopra l’8 di media. Le cifre sono di EA.
         </p>
       </div>
       <div className="paper-trial-grid">

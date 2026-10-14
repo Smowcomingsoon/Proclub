@@ -443,7 +443,7 @@ export function buildShareText({ night, nightStats, cover, trials }) {
   const verdicts = trials
     .map(
       ({ player, trial }) =>
-        `\n${player.name} · ${formatRating(player.rating)} EA\nElogio: ${trial.praise}\nAccusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
+        `\n${player.name} · ${formatRating(player.rating)} EA\n${trial.praise ? `Elogio: ${trial.praise}\n` : ''}Accusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
     )
     .join('\n');
   return `BILLOCCHI · IL GIORNO DOPO\nSerata del ${formatLongDate(night.day)}\n${cover.title}\n${cover.deck}\n${night.games.length} gare: ${nightStats.wins}V ${nightStats.draws}P ${nightStats.losses}S · ${nightStats.goals} gol fatti, ${nightStats.against} subiti.\n${bestOfNight}${verdicts}\nhttps://billocchi-club.kr3n.chatgpt.site/`;

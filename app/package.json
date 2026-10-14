@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prebuild": "node -e \"const f=require('fs');f.copyFileSync('../data/data.json','public/data.json');f.copyFileSync('../data/archive/index.json','public/archive.json')\""
   },
   "dependencies": {
     "lucide-react": "^1.57.0",

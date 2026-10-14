@@ -36,6 +36,7 @@ function App() {
       <SiteHeader connection={connection} />
       <main id="top">
         <DayAfter
+          data={data}
           members={data.members.members}
           matches={data.matchHistory || recentMatches}
         />
