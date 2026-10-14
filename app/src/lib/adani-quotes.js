@@ -219,7 +219,8 @@ export function toQuotePlayer(member) {
     goals: count(member.goals),
     assists: count(member.assists),
     rating: count(member.gamesPlayed) ? count(member.ratingAve) : null,
-    passPct: count(member.passSuccessRate),
+    // Assente/0 = dato mancante: non deve far passare per "roast" un Pro che gioca.
+    passPct: count(member.passSuccessRate) || null,
     tackles: count(member.tacklesMade),
   };
 }
