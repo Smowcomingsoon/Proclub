@@ -1,0 +1,106 @@
+/*
+ * Ritocchi mobile e accessibilità (audit 360/390/430 px).
+ * Solo override caricati dopo styles.css: sopra i 700px lo stile desktop non cambia.
+ */
+
+/* contrasti appena sotto soglia */
+.paper-proof-matches time { color: #55694a; }
+.paper-chapters summary > span { color: #566f45; }
+.paper-trend > small { color: #4f6642; }
+.paper-story-no { color: #72905c; }
+
+/* bersaglio di tocco del pulsante di chiusura e link flottante di extras.js */
+.dialog-close { min-width: 44px; min-height: 44px; line-height: 1; }
+body:has(.card-dialog) #x-stats { display: none !important; }
+
+@media (max-width: 700px) {
+  .section-navigation a { min-height: 44px; min-width: 44px; justify-content: center; }
+  .section-navigation { padding: 0 0 4px; }
+  .brand { min-height: 44px; }
+  .day-after select,
+  .performance-grades select,
+  .match-lab select,
+  .grades-table button,
+  .refresh,
+  .paper-notebook button { min-height: 44px; }
+
+  .paper-nav { gap: 0 22px; }
+  .paper-nav a,
+  .overview .form a,
+  footer a,
+  .paper-season-index > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .paper-lead-details summary,
+  .paper-turning-grid details summary,
+  .paper-verdict summary,
+  .paper-method summary,
+  .grade-method summary,
+  .day-after details > summary {
+    box-sizing: border-box;
+    min-height: 44px;
+    padding-block: 11px;
+  }
+  .day-after .paper-score summary { min-height: 0; padding-block: 12px; }
+  .day-after details > p > a { display: inline-block; min-width: 44px; padding-block: 13px; }
+  .paper-nav a { min-width: 44px; }
+
+  #x-stats {
+    right: 12px !important;
+    bottom: 12px !important;
+    min-height: 44px;
+    box-sizing: border-box;
+    display: inline-flex !important;
+    align-items: center;
+  }
+  footer { padding-bottom: 76px; }
+
+  /* tabelle: prima colonna ferma, meno spazio, didascalia leggibile */
+  .grades-table { min-width: 600px; }
+  .lab-table { min-width: 600px; font-size: 15px; }
+  .grades-table th, .grades-table td { padding: 14px 12px; }
+  .lab-table th, .lab-table td { padding: 13px 12px; }
+  .grades-table td > b { font-size: 30px; }
+  .grades-table tbody th { min-width: 128px; overflow-wrap: normal; }
+  .grades-table tbody th,
+  .lab-table tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #0f2118;
+    box-shadow: 1px 0 0 #2d4434;
+  }
+  .grades-table thead th:first-child,
+  .lab-table thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #20341f;
+  }
+  .lab-table thead th:first-child { background: #1c3122; }
+  .lab-table caption {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: calc(100vw - 38px);
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-fade, .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+/* segnaposto mentre il chunk delle sezioni sotto la piega si carica */
+.below-fold-pending { min-height: 100vh; }
+
+/* miniature della classifica: versioni 144x216 al posto delle figurine 768x1152 (-700 kB) */
+.leader-mini-card { background-image: url(/cards/thumb/bronze.webp); }
+.leader-mini-card.iridescent { background-image: url(/cards/thumb/iridescent.webp); }
+.leader-mini-card.platinum { background-image: url(/cards/thumb/platinum.webp); }
+.leader-mini-card.gold { background-image: url(/cards/thumb/gold.webp); }
+.leader-mini-card.silver { background-image: url(/cards/thumb/silver.webp); }
+
+@media (max-width: 580px) { .nav { padding-top: 4px; } }
