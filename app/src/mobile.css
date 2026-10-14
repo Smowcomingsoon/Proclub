@@ -9,9 +9,8 @@
 .paper-trend > small { color: #4f6642; }
 .paper-story-no { color: #72905c; }
 
-/* bersaglio di tocco del pulsante di chiusura e link flottante di extras.js */
+/* bersaglio di tocco del pulsante di chiusura del dialog */
 .dialog-close { min-width: 44px; min-height: 44px; line-height: 1; }
-body:has(.card-dialog) #x-stats { display: none !important; }
 
 @media (max-width: 700px) {
   .section-navigation a { min-height: 44px; min-width: 44px; justify-content: center; }
@@ -47,15 +46,6 @@ body:has(.card-dialog) #x-stats { display: none !important; }
   .day-after details > p > a { display: inline-block; min-width: 44px; padding-block: 13px; }
   .paper-nav a { min-width: 44px; }
 
-  #x-stats {
-    right: 12px !important;
-    bottom: 12px !important;
-    min-height: 44px;
-    box-sizing: border-box;
-    display: inline-flex !important;
-    align-items: center;
-  }
-  footer { padding-bottom: 76px; }
 
   /* tabelle: prima colonna ferma, meno spazio, didascalia leggibile */
   .grades-table { min-width: 600px; }

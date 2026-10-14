@@ -33,4 +33,23 @@ function apiDataPlugin() {
 
 export default defineConfig({
   plugins: [react(), apiDataPlugin()],
+  build: {
+    // la scena 3D (three.js, ~640 kB) è l'unico chunk grande ed è caricata in lazy
+    chunkSizeWarningLimit: 700,
+    rolldownOptions: {
+      output: {
+        // react e snapshot dati in chunk propri: cache stabile tra un deploy e l'altro
+        // e nessun chunk d'ingresso sopra i 500 kB.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+            { name: 'club-fallback', test: /fallback-data\.json/ },
+          ],
+        },
+      },
+    },
+  },
 });

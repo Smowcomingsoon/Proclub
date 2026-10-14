@@ -23,7 +23,15 @@ export function CollectorCard({ member, profile, onClick }) {
         {formatProOverall(member)}
         <small>{profile.label}</small>
       </span>
-      <img className="collector-crest" src="/logo-billocchi.svg" alt="" />
+      <img
+        className="collector-crest"
+        src="/logo-billocchi.svg"
+        alt=""
+        width="40"
+        height="40"
+        loading="lazy"
+        decoding="async"
+      />
       <span className="collector-tier">
         {profile.basis === 'season'
           ? `INDICE STAG. ${profile.score}`
@@ -37,6 +45,10 @@ export function CollectorCard({ member, profile, onClick }) {
           className="collector-player-image"
           src="/cards/we-belen-portrait.webp"
           alt=""
+          width="600"
+          height="719"
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <span className="collector-portrait" aria-hidden="true">
