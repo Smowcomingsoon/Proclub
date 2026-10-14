@@ -816,3 +816,5 @@
     scroll-behavior: auto !important;
   }
 }
+
+.pg-ref-label { paint-order: stroke; stroke: var(--panel, #101f19); stroke-width: 4px; stroke-linejoin: round; }
