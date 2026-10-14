@@ -9,6 +9,12 @@ const dataFile = fileURLToPath(new URL('../data/data.json', import.meta.url));
 
 function apiDataPlugin() {
   const handler = (req, res, next) => {
+    // Vecchio indirizzo della pagina statistiche: ora è una vista dell'app.
+    if (req.url?.split('?')[0] === '/statistiche.html') {
+      res.statusCode = 308;
+      res.setHeader('Location', '/#/statistiche');
+      return res.end();
+    }
     if (req.url?.split('?')[0] !== '/api/data') return next();
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');

@@ -10,11 +10,14 @@ export function CollectorCard({ member, profile, onClick }) {
     [member.tacklesMade, 'CTR'],
     [member.ratingAve, 'MED'],
   ];
+  // Senza onClick la figurina è solo illustrativa (pagina del giocatore).
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <button
+    <Tag
       className={`collector-card ${profile.tier} ${profile.hot ? 'on-fire' : ''}`}
       onClick={onClick}
-      aria-label={`${member.name}, overall EA ${formatProOverall(member)}, ${profile.label}, ${member.goals} gol e ${member.assists} assist stagionali${profile.hot ? ', in forma eccezionale' : ''}. Apri la pagella`}
+      role={onClick ? undefined : 'img'}
+      aria-label={`${member.name}, overall EA ${formatProOverall(member)}, ${profile.label}, ${member.goals} gol e ${member.assists} assist stagionali${profile.hot ? ', in forma eccezionale' : ''}${onClick ? '. Apri la pagella' : ''}`}
     >
       <span className="collector-rating">
         {formatProOverall(member)}
@@ -49,6 +52,6 @@ export function CollectorCard({ member, profile, onClick }) {
           </span>
         ))}
       </span>
-    </button>
+    </Tag>
   );
 }

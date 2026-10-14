@@ -25,7 +25,7 @@ continua a pubblicare `site/` finché non si decide di puntare a `app/dist`
 ```
 index.html            head identico a site/index.html (title, og, favicon, lang=it)
 public/               asset statici copiati da site/ (cards/, models/, logo, data.json,
-                      archive.json, statistiche.html, extras.js, robots.txt, 404.html)
+                      archive.json, robots.txt, 404.html)
 src/main.jsx          createRoot + stili
 src/styles.css        CSS originale (site/_next/static/css/index.*.css)
 src/App.jsx           composizione delle sezioni
@@ -46,6 +46,17 @@ src/components/       sezioni UI
   MatchLab + match-lab/ ("Lo spogliatoio": studio / curva / testa a testa),
   MatchArchive, SiteHeader, SiteFooter, SectionNav, CountUp, Reveal, AdaniMini, AdaniComment
 ```
+
+## Viste a pagina intera (hash routing)
+
+`src/lib/route.js` interpreta l'hash: `#/statistiche` (`StatsPage`: record, classifica Pro
+con tab/ordinamento, testa a testa, archivio per mese, bilancio avversari da `/archive.json`)
+e `#/pro/<nome>` (`PlayerPage`: figurina, forma con grafico SVG dei voti per gara, numeri a gara
+vs mediana dei pari ruolo, punti di forza/deboli e nota dal motore `shared/`, con/senza e coppie
+solo se il motore li produce, serate recenti). Nome non valido: redirect a `#rosa`; Pro senza
+presenze: stato vuoto. `/statistiche.html` reindirizza a `/#/statistiche` (`vercel.json` e plugin
+Vite in dev/preview). Stili in `src/pages.css`. I voti per gara vengono da `matchHistory`
+(l'archivio contiene solo i risultati).
 
 ## Verifica di parità (Playwright)
 

@@ -1,6 +1,7 @@
 import { Quote, Trophy } from 'lucide-react';
 import { formatRating } from '../../lib/format.js';
 import { POSITION_ABBREVIATIONS } from '../../lib/positions.js';
+import { playerHref } from '../../lib/route.js';
 import { AdaniComment } from '../AdaniComment.jsx';
 
 function TrialCard({ index, isCoverPro, nightQuotes, player, trial }) {
@@ -39,6 +40,9 @@ function TrialCard({ index, isCoverPro, nightQuotes, player, trial }) {
         <span className="paper-open-case">Leggi accusa e verdetto</span>
       </summary>
       <div className="paper-case-body">
+        <a className="pg-link pg-link-case" href={playerHref(player.name)}>
+          Pagina del giocatore
+        </a>
         {trial.praise && (
           <div className="paper-praise">
             <span>IN SUO FAVORE</span>

@@ -1,2 +1,0 @@
-(function(){function add(){if(document.getElementById('x-stats'))return;var a=document.createElement('a');a.id='x-stats';a.href='/statistiche.html';a.textContent='Statistiche avanzate';a.style.cssText='position:fixed;right:16px;bottom:16px;z-index:50;padding:10px 16px;border-radius:999px;background:#c6ff3d;color:#0b0f0c;font:600 14px system-ui,sans-serif;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.35)';document.body.appendChild(a)}
-window.addEventListener('load',function(){setTimeout(add,1500);setInterval(add,5000)})})();
