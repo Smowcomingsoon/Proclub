@@ -1,12 +1,14 @@
+import {
+  coverEditorial,
+  turningPointsEditorial,
+} from '../../../shared/editorial.mjs';
 import { CLUB_ID } from './constants.js';
 import {
   formatLongDate,
   formatMatchTime,
   formatRating,
-  formatScore,
 } from './format.js';
 import { buildGradeComments } from './grades.js';
-import { getOpponentName, getResultLetter } from './matches.js';
 import { POSITION_ABBREVIATIONS } from './positions.js';
 import { mean, toFiniteNumber } from './stats.js';
 
@@ -14,250 +16,59 @@ import { mean, toFiniteNumber } from './stats.js';
 const charCodeSum = (text) =>
   [...text].reduce((total, char) => total + char.charCodeAt(0), 0);
 
-/** Titolo e sommario della copertina della serata. */
-export function buildCover(players, winners, day = '') {
-  const leader =
-    winners[0] ||
-    [...players].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1))[0];
-  if (!leader)
+/**
+ * Copertina critica della serata (titolo, sommario, chiusura, premio). Usa il motore
+ * condiviso: `ctx` = { metricsByName, club } da `buildAll` / `analyzeClub`.
+ */
+export function buildCover(nightStats, gameCount, day = '', ctx = {}) {
+  if (!nightStats.players.length)
     return {
       name: 'BILLOCCHI CLUB',
       title: 'La prossima storia aspetta il fischio d’inizio.',
       deck: 'Le prime gare registrate apriranno la prima pagina del club.',
+      closing: '',
+      balance: '',
+      note: '',
+      awardLabel: 'IL MIGLIORE DELLA SERATA',
     };
-  const dayNumber = day
-    ? Math.floor(Date.parse(day + 'T12:00:00Z') / 864e5)
-    : 0;
-  const pick = (options, offset = 0) =>
-    options[
-      ((Number.isFinite(dayNumber) ? dayNumber : 0) +
-        charCodeSum(leader.name) +
-        offset) %
-        options.length
-    ];
-  const name = leader.name;
-  const statLine = `${leader.goals} gol, ${leader.assists} assist e media EA ${formatRating(leader.rating)} in ${leader.games} presenze.`;
-  const headlines = {
-    assist: [
-      `${name} firma l’ultimo passaggio.`,
-      `${name}, la regia dei gol.`,
-      `${name} distribuisce occasioni, non alibi.`,
-      `${name}, il tabellino ringrazia.`,
-      `${name} mette gli assist in prima pagina.`,
-      `${name}, copyright sulla rifinitura.`,
-      `${name} fa segnare anche il titolo.`,
-      `${name}, il conto lo saldano gli assist.`,
-      `${name} manda i compagni in copertina.`,
-      `${name}, la firma dietro al gol.`,
-      `${name} prepara, il club incassa.`,
-      `${name}, gli assist fanno notizia.`,
-    ],
-    goal: [
-      `${name} riscrive il tabellino.`,
-      `${name}, la porta è un appuntamento fisso.`,
-      `${name} lascia il segno, più volte.`,
-      `${name}, la rete ha il suo nome.`,
-      `${name} fa parlare i gol.`,
-      `${name}, prima pagina a suon di reti.`,
-      `${name} presenta il conto in area.`,
-      `${name}, la contabilità della rete.`,
-      `${name} colleziona firme sul risultato.`,
-      `${name}, gol da mettere agli atti.`,
-      `${name} cambia i numeri del club.`,
-      `${name}, la copertina passa dalla porta.`,
-    ],
-    save: [
-      `${name} difende la copertina.`,
-      `${name}, le parate fanno notizia.`,
-      `${name} risponde tra i pali.`,
-      `${name}, il presidio della porta.`,
-      `${name} mette le mani sul titolo.`,
-      `${name}, la rete trova un custode.`,
-      `${name} porta le parate in prima pagina.`,
-      `${name}, gli interventi lasciano traccia.`,
-      `${name} fa valere i guanti.`,
-      `${name}, una firma tra i pali.`,
-      `${name} chiama in causa il tabellino.`,
-      `${name}, la porta ha voce in redazione.`,
-    ],
-    pass: [
-      `${name} tiene insieme il racconto.`,
-      `${name}, precisione da prima pagina.`,
-      `${name} dà ordine ai numeri.`,
-      `${name}, i passaggi trovano destinatario.`,
-      `${name} firma il fraseggio.`,
-      `${name}, la precisione lascia il segno.`,
-      `${name} tiene il filo della serata.`,
-      `${name}, il pallone arriva a destinazione.`,
-      `${name} convince col possesso.`,
-      `${name}, qualità nella distribuzione.`,
-      `${name} fa circolare la copertina.`,
-      `${name}, la manovra ha la sua firma.`,
-    ],
-    overall: [
-      `${name} si prende il titolo.`,
-      `${name}, una serata da raccontare.`,
-      `${name} lascia la firma sulla notte.`,
-      `${name}, i voti lo portano in copertina.`,
-      `${name} sale sul tavolo della redazione.`,
-      `${name}, la prova che vale la prima pagina.`,
-      `${name} chiude la serata in evidenza.`,
-      `${name}, il tabellino sostiene l’applauso.`,
-      `${name} conquista la cronaca del club.`,
-      `${name}, una firma sopra la media.`,
-      `${name} guida questa edizione.`,
-      `${name}, il rendimento diventa notizia.`,
-    ],
-    shared: [
-      'La prima pagina si divide.',
-      'Più firme sulla stessa copertina.',
-      'La redazione allarga il podio.',
-      'Il titolo ha più protagonisti.',
-      'Una copertina, più autori.',
-      'La notte trova firme alla pari.',
-      'Il voto non scioglie il pari merito.',
-      'Gli applausi si dividono equamente.',
-      'La prima pagina fa spazio a tutti.',
-      'Il riconoscimento ha più nomi.',
-      'La copertina è un lavoro a più mani.',
-      'Il verdetto lascia il titolo condiviso.',
-    ],
-  };
-  if (winners.length > 1)
-    return {
-      name: winners.map((winner) => winner.name).join(' + '),
-      title: pick(headlines.shared),
-      deck:
-        `${winners.map((winner) => winner.name).join(' e ')} condividono il riconoscimento: media EA ${formatRating(leader.rating)}. ` +
-        pick(
-          [
-            'Il pari merito è nei numeri.',
-            'La redazione assegna una copertina condivisa.',
-            'Stesso voto, stesso applauso.',
-            'Nessun nome viene escluso dal titolo.',
-          ],
-          3,
-        ),
-    };
-  const category =
-    leader.assists >= 3 && leader.assists > leader.goals
-      ? 'assist'
-      : leader.goals >= 3
-        ? 'goal'
-        : leader.saves >= 3
-          ? 'save'
-          : leader.passPct !== null && leader.passPct >= 85
-            ? 'pass'
-            : 'overall';
-  const extra =
-    category === 'save'
-      ? ` ${leader.saves} parate registrate.`
-      : category === 'pass'
-        ? ` ${leader.passPct}% di passaggi riusciti.`
-        : '';
-  return {
-    name,
-    title: pick(headlines[category]),
-    deck:
-      statLine +
-      extra +
-      ' ' +
-      pick(
-        [
-          'Le cifre sostengono la copertina di questa edizione.',
-          'La redazione parte dai numeri, poi si prende la libertà dell’applauso.',
-          'Il riconoscimento arriva dalle gare registrate della serata.',
-          'È la firma che emerge dal voto EA di questa edizione.',
-          'Il verdetto del club ha questi numeri agli atti.',
-          'La cronaca delle partite raccolte comincia da qui.',
-        ],
-        5,
-      ),
-  };
+  return coverEditorial({
+    day,
+    record: {
+      wins: nightStats.wins,
+      draws: nightStats.draws,
+      losses: nightStats.losses,
+      goals: nightStats.goals,
+      against: nightStats.against,
+      games: gameCount,
+    },
+    winners: nightStats.winners,
+    players: nightStats.players,
+    metricsByName: ctx.metricsByName,
+    club: ctx.club,
+  });
 }
 
-/** Fino a tre "svolte della notte": vittoria più larga, risposta, serie positiva, gara in bilico. */
-export function buildTurningPoints(games) {
-  const sorted = [...games].sort((a, b) => a.timestamp - b.timestamp);
-  const points = [];
-  const wins = sorted
-    .filter((game) => getResultLetter(game) === 'V')
-    .sort((first, second) => {
-      const firstOwn = first.clubs[CLUB_ID];
-      const secondOwn = second.clubs[CLUB_ID];
-      return (
-        toFiniteNumber(secondOwn.goals) -
-        toFiniteNumber(secondOwn.goalsAgainst) -
-        (toFiniteNumber(firstOwn.goals) - toFiniteNumber(firstOwn.goalsAgainst))
-      );
-    });
-  wins[0] &&
-    points.push({
-      tag: 'LA VITTORIA PIÙ LARGA',
-      title: `${formatScore(wins[0])}. Il tabellino parla forte.`,
-      text: `Contro ${getOpponentName(wins[0])}, alle ${formatMatchTime(wins[0])}: il margine più ampio tra le vittorie di questa edizione.`,
-      games: [wins[0]],
-    });
-  const reaction = sorted.find(
-    (game, index) =>
-      index > 0 &&
-      getResultLetter(game) === 'V' &&
-      getResultLetter(sorted[index - 1]) === 'S',
-  );
-  if (reaction) {
-    const index = sorted.indexOf(reaction);
-    points.push({
-      tag: 'LA RISPOSTA',
-      title: 'Una sconfitta, poi la replica.',
-      text: `Dopo il ${formatScore(sorted[index - 1])} contro ${getOpponentName(sorted[index - 1])}, arriva il ${formatScore(reaction)} contro ${getOpponentName(reaction)}. La partita successiva rimette una vittoria nel bilancio.`,
-      games: [sorted[index - 1], reaction],
-    });
-  }
-  let currentRun = [];
-  let bestRun = [];
-  for (const game of sorted)
-    getResultLetter(game) === 'S'
-      ? (currentRun = [])
-      : (currentRun.push(game),
-        currentRun.length > bestRun.length && (bestRun = [...currentRun]));
-  bestRun.length >= 3 &&
-    points.push({
-      tag: 'LA SERIE POSITIVA',
-      title: `${bestRun.length} gare senza cedere.`,
-      text: `${bestRun.filter((game) => getResultLetter(game) === 'V').length} vittorie e ${bestRun.filter((game) => getResultLetter(game) === 'P').length} pareggi consecutivi nelle partite registrate della serata.`,
-      games: bestRun,
-    });
-  const closest = sorted
-    .filter(
-      (game) =>
-        Math.abs(
-          toFiniteNumber(game.clubs[CLUB_ID]?.goals) -
-            toFiniteNumber(game.clubs[CLUB_ID]?.goalsAgainst),
-        ) <= 1,
-    )
-    .sort(
-      (a, b) =>
-        toFiniteNumber(b.clubs[CLUB_ID]?.goals) +
-        toFiniteNumber(b.clubs[CLUB_ID]?.goalsAgainst) -
-        toFiniteNumber(a.clubs[CLUB_ID]?.goals) -
-        toFiniteNumber(a.clubs[CLUB_ID]?.goalsAgainst),
-    )[0];
-  closest &&
-    points.push({
-      tag: 'IL RISULTATO IN BILICO',
-      title: `${formatScore(closest)}. Margine minimo.`,
-      text: `${getOpponentName(closest)}, alle ${formatMatchTime(closest)}: ${getResultLetter(closest) === 'P' ? 'un pareggio' : 'una gara chiusa con un solo gol di scarto'}. Il risultato finale racconta quanto fossero vicine le squadre.`,
-      games: [closest],
-    });
-  !points.length &&
-    sorted[0] &&
-    points.push({
-      tag: 'IL BILANCIO',
-      title: 'Una notte da cui ripartire.',
-      text: `${sorted.length} gare registrate. Apri i tabellini per vedere dove è finito il contributo di ciascun Pro.`,
-      games: sorted,
-    });
-  return points.slice(0, 3);
+/** Fino a tre svolte della serata, con testi critici basati sui dati EA delle gare. */
+export function buildTurningPoints(games, ctx = {}) {
+  return turningPointsEditorial(games, {
+    clubId: CLUB_ID,
+    metricsByName: ctx.metricsByName,
+    fmtTime: formatMatchTime,
+  });
+}
+
+/** Titolo del fascicolo, dal giudizio del motore e dalla media stagionale (non dai gol). */
+export function buildTrialTitle(verdict, metrics) {
+  const byTier = {
+    elite: 'sopra l’8, con riserva.',
+    buono: 'buono, non da elogio.',
+    medio: 'utile, mai decisivo.',
+    rimandato: 'rimandato dai numeri.',
+    bocciato: 'bocciato dai numeri.',
+  };
+  if (!verdict || !byTier[verdict.tier]) return 'Campione troppo corto per giudicare.';
+  const role = metrics?.proPosLabel ? ` · ${metrics.proPosLabel}` : '';
+  return `Stagione ${formatRating(metrics?.rating ?? null)}${role}: ${byTier[verdict.tier]}`;
 }
 
 /** Elogio, accusa, prova e verdetto ironico per un Pro. */
@@ -438,7 +249,7 @@ export function buildShareText({ night, nightStats, cover, trials }) {
   if (!night) return '';
   const { winners } = nightStats;
   const bestOfNight = winners.length
-    ? `Migliore delle gare registrate: ${winners.map((winner) => winner.name).join(' + ')} · media EA ${formatRating(winners[0].rating)}.\n`
+    ? `${cover.awardLabel}: ${winners.map((winner) => winner.name).join(' + ')} · media EA ${formatRating(winners[0].rating)}.\n`
     : '';
   const verdicts = trials
     .map(
@@ -446,5 +257,5 @@ export function buildShareText({ night, nightStats, cover, trials }) {
         `\n${player.name} · ${formatRating(player.rating)} EA\n${trial.praise ? `Elogio: ${trial.praise}\n` : ''}Accusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
     )
     .join('\n');
-  return `BILLOCCHI · IL GIORNO DOPO\nSerata del ${formatLongDate(night.day)}\n${cover.title}\n${cover.deck}\n${night.games.length} gare: ${nightStats.wins}V ${nightStats.draws}P ${nightStats.losses}S · ${nightStats.goals} gol fatti, ${nightStats.against} subiti.\n${bestOfNight}${verdicts}\nhttps://billocchi-club.kr3n.chatgpt.site/`;
+  return `BILLOCCHI · IL GIORNO DOPO\nSerata del ${formatLongDate(night.day)}\n${cover.title}\n${cover.deck}\n${cover.closing ? cover.closing + '\n' : ''}${night.games.length} gare: ${nightStats.wins}V ${nightStats.draws}P ${nightStats.losses}S · ${nightStats.goals} gol fatti, ${nightStats.against} subiti.\n${bestOfNight}${verdicts}\nhttps://billocchi-club.kr3n.chatgpt.site/`;
 }

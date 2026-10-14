@@ -1,3 +1,4 @@
+import { ROLE_INFO, roleFor } from '../../../../shared/metrics.mjs';
 import { formatNumber } from '../../lib/format.js';
 import { getClubPlayers, getOpponentName } from '../../lib/matches.js';
 import { POSITION_NAMES } from '../../lib/positions.js';
@@ -57,6 +58,7 @@ export function CurvePanel({
   setFormRoleChoice,
   sortedMatches,
 }) {
+  const passMin = ROLE_INFO[roleFor(formRole, null)].passMin;
   return (
     <div
       className="lab-panel"
@@ -143,25 +145,27 @@ export function CurvePanel({
         </div>
       </div>
       <div className="lab-story">
-        <span>IL PROSSIMO OBIETTIVO</span>
+        <span>IL PUNTO DA CORREGGERE</span>
         <h3>
           {formSummary.games
-            ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < 75
-              ? 'Far arrivare un pallone in più.'
+            ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < passMin
+              ? 'Troppi palloni persi.'
               : formSummary.shots >= 5 && formSummary.goals === 0
-                ? 'Trasformare il volume in gol.'
+                ? 'Tiri senza gol: spreco.'
                 : ratingDelta !== null && ratingDelta < 0
-                  ? 'Riprendere il proprio ritmo.'
-                  : 'Alzare il proprio riferimento.'
-            : 'Aspettiamo il campo.'}
+                  ? 'Ultima gara sotto il proprio livello.'
+                  : 'Nessun difetto netto: non è un elogio.'
+            : 'Nessuna presenza da giudicare.'}
         </h3>
         <p>
           {formSummary.games
-            ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < 75
-              ? `${formSummary.attempts - formSummary.passes} passaggi non riusciti su ${formSummary.attempts}. Prova a scegliere una soluzione semplice in più: il dato da seguire è la percentuale nel medesimo reparto.`
+            ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < passMin
+              ? `${formSummary.attempts - formSummary.passes} passaggi non riusciti su ${formSummary.attempts}: ${formSummary.pass}% contro una soglia del ${passMin}% per il reparto. Il possesso regalato pesa più del voto.`
               : formSummary.shots >= 5 && formSummary.goals === 0
-                ? `${formSummary.shots} tiri senza gol nelle gare osservate. Il prossimo traguardo è il primo gol; dai dati non possiamo dedurre la qualità delle occasioni.`
-                : `Il riferimento attuale è ${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze. Prova a superarlo nella prossima gara nello stesso reparto, senza confonderlo con l’overall dell’avatar.`
+                ? `${formSummary.shots} tiri senza un gol nelle gare osservate: conclusioni da selezionare meglio. Dai dati non si deduce la qualità delle occasioni.`
+                : ratingDelta !== null && ratingDelta < 0
+                  ? `Ultima gara ${Math.abs(ratingDelta).toFixed(1)} punti sotto la media delle precedenti (${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze): un calo da spiegare.`
+                  : `${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze nel reparto: nessun difetto netto nei dati disponibili${toNumber(formSummary.rating) > 8 ? '' : ', ma sotto l’8 non c’è elogio'}.`
             : 'Nessuna presenza consultabile.'}
         </p>
       </div>

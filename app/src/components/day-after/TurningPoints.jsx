@@ -5,7 +5,7 @@ export function TurningPoints({ turningPoints }) {
     <section className="paper-turning" id="svolte">
       <div className="paper-section-heading">
         <span>01 / LE SVOLTE DELLA NOTTE</span>
-        <h3>Le partite lasciano il segno.</h3>
+        <h3>Dove la serata è girata.</h3>
       </div>
       <div className="paper-turning-grid">
         {turningPoints.map((turningPoint, index) => (
@@ -15,7 +15,7 @@ export function TurningPoints({ turningPoints }) {
             <h4>{turningPoint.title}</h4>
             <p>{turningPoint.text}</p>
             <details>
-              <summary>Le partite che lo raccontano</summary>
+              <summary>Le partite coinvolte</summary>
               <MatchStrip matches={turningPoint.games} />
             </details>
           </article>

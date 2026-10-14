@@ -13,7 +13,7 @@ function roleOf(m) {
 }
 
 /* Soglie di lavoro sul contributo offensivo (gol+assist a partita, stagionale), per ruolo. */
-const GA_MIN = {ATT: 0.8, TRQ: 0.5, MEZ_OFF: 0.5, ESTERNO: 0.4, CC: 0.3};
+export const GA_MIN = {ATT: 0.8, TRQ: 0.5, MEZ_OFF: 0.5, ESTERNO: 0.4, CC: 0.3};
 
 function negatives(m) {
   const n = [];

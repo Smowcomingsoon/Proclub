@@ -1,4 +1,8 @@
 import { Check, Copy, Crosshair, Flame, Sparkles, Trophy } from 'lucide-react';
+import {
+  awardEditorial,
+  matchStudioEditorial,
+} from '../../../../shared/editorial.mjs';
 import { CLUB_ID } from '../../lib/constants.js';
 import { formatNumber } from '../../lib/format.js';
 import { getOpponentName } from '../../lib/matches.js';
@@ -48,62 +52,55 @@ function Scoreboard({ dateLabel, outcome, ownClub, selectedMatch }) {
   );
 }
 
-function Verdict({ matchSummary, ownClub, topAssister, topRated }) {
+function Verdict({ matchPlayers, metricsByName, ownClub }) {
+  const studio = matchStudioEditorial({
+    own: ownClub,
+    players: matchPlayers,
+    metricsByName,
+  });
   return (
     <div className="lab-story">
       <span>IL VERDETTO DELLO SPOGLIATOIO</span>
-      <h3>
-        {toNumber(ownClub.goalsAgainst) === 0
-          ? 'Porta chiusa. Chat aperta.'
-          : toNumber(ownClub.goals) > toNumber(ownClub.goalsAgainst)
-            ? 'Tre punti, qualche brivido.'
-            : toNumber(ownClub.goals) < toNumber(ownClub.goalsAgainst)
-              ? 'La rivincita parte da qui.'
-              : 'Equilibrio sul campo. Dibattito in chat.'}
-      </h3>
-      <p>
-        {topRated
-          ? `${topRated.playername} firma il miglior voto tra i Pro (${topRated.rating}). `
-          : ''}
-        {topAssister
-          ? `${topAssister.playername} serve ${topAssister.assists} assist. `
-          : ''}
-        {matchSummary.shots
-          ? `${matchSummary.goals} gol su ${matchSummary.shots} tiri dei Pro: conversione ${percentage(matchSummary.goals, matchSummary.shots)}%.`
-          : 'Nessun tiro dei Pro registrato.'}{' '}
-        {matchSummary.attempts
-          ? `${matchSummary.attempts - matchSummary.passes} passaggi tentati non riusciti: un punto concreto da rivedere insieme.`
-          : ''}
-      </p>
+      <h3>{studio.headline}</h3>
+      <p>{studio.text}</p>
     </div>
   );
 }
 
-function LabAwards({ bestPasser, mvp, topAssister, topRated, topTackler }) {
+function LabAwards({
+  bestPasser,
+  metricsByName,
+  mvp,
+  topAssister,
+  topRated,
+  topTackler,
+}) {
   return (
     <div className="lab-awards">
       <LabAward
         label={mvp ? 'MVP UFFICIALE EA' : 'MIGLIOR VOTO PRO'}
         player={mvp || topRated}
-        detail={`Voto ${(mvp || topRated)?.rating} · ${POSITION_NAMES[(mvp || topRated)?.pos || ''] || 'Ruolo EA'}. La copertina è sua.`}
+        detail={
+          (mvp || topRated) && awardEditorial('rated', mvp || topRated, metricsByName)
+        }
         icon={<Trophy />}
       />
       <LabAward
-        label="IL CAMERIERE"
+        label="PIÙ ASSIST"
         player={topAssister}
-        detail={`${topAssister?.assists} assist. Ha apparecchiato, gli altri hanno mangiato.`}
+        detail={topAssister && awardEditorial('assist', topAssister, metricsByName)}
         icon={<Sparkles />}
       />
       <LabAward
-        label="IL BUTTAFUORI"
+        label="PIÙ CONTRASTI"
         player={topTackler}
-        detail={`${topTackler?.tacklesmade} contrasti riusciti su ${topTackler?.tackleattempts}. Il pallone non passa gratis.`}
+        detail={topTackler && awardEditorial('tackle', topTackler, metricsByName)}
         icon={<Crosshair />}
       />
       <LabAward
-        label="PIEDI EDUCATI"
+        label="PASSAGGI PIÙ PULITI"
         player={bestPasser}
-        detail={`${bestPasser?.passesmade}/${bestPasser?.passattempts} passaggi (${percentage(toNumber(bestPasser?.passesmade), toNumber(bestPasser?.passattempts))}%). Almeno 10 tentativi per il premio.`}
+        detail={bestPasser && awardEditorial('pass', bestPasser, metricsByName)}
         icon={<Flame />}
       />
     </div>
@@ -174,7 +171,8 @@ export function StudioPanel({
   copySummary,
   dateLabel,
   mvp,
-  matchSummary,
+  matchPlayers,
+  metricsByName,
   outcome,
   ownClub,
   selectedMatch,
@@ -248,13 +246,13 @@ export function StudioPanel({
         selectedMatch={selectedMatch}
       />
       <Verdict
-        matchSummary={matchSummary}
+        matchPlayers={matchPlayers}
+        metricsByName={metricsByName}
         ownClub={ownClub}
-        topAssister={topAssister}
-        topRated={topRated}
       />
       <LabAwards
         bestPasser={bestPasser}
+        metricsByName={metricsByName}
         mvp={mvp}
         topAssister={topAssister}
         topRated={topRated}
@@ -281,8 +279,9 @@ export function StudioPanel({
         sortedPlayers={sortedPlayers}
       />
       <p className="lab-note">
-        I premi sono assegnati automaticamente dai dati della gara; in parità
-        decide il voto EA. I passaggi e i tiri riguardano solo i Pro registrati,
+        I riconoscimenti sono assegnati automaticamente dai dati della gara; in
+        parità decide il voto EA, e sotto l’8 non sono elogi. Le soglie dei
+        passaggi dipendono dal ruolo. I passaggi e i tiri riguardano solo i Pro registrati,
         non l’intera squadra. Conversione = gol/tiri, non precisione nello
         specchio. Nessuna cronaca minuto per minuto è disponibile.
       </p>

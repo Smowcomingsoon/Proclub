@@ -1,9 +1,8 @@
 import { Trophy } from 'lucide-react';
 import { formatRating } from '../../lib/format.js';
-import { buildTrial } from '../../lib/newsroom.js';
 import { MatchStrip } from './MatchStrip.jsx';
 
-function CoverLead({ cover, coverPlayer, nightStats, selectedNight }) {
+function CoverLead({ cover, selectedNight }) {
   return (
     <article className="paper-lead">
       <span className="paper-eyebrow">
@@ -14,44 +13,23 @@ function CoverLead({ cover, coverPlayer, nightStats, selectedNight }) {
       <h2>{cover.title}</h2>
       <p className="paper-deck">{cover.deck}</p>
       <details className="paper-lead-details">
-        <summary>Apri la storia e le cifre</summary>
+        <summary>Apri il bilancio e le cifre</summary>
         <p>
-          {nightStats.wins}
-          {' vittorie, '}
-          {nightStats.draws}
-          {' pareggi e '}
-          {nightStats.losses}
-          {' sconfitte. '}
-          {nightStats.goals}
-          {' reti segnate e '}
-          {nightStats.against}
-          {' subite: '}
-          {nightStats.goals > nightStats.against
-            ? 'l’attacco sostiene un saldo positivo'
-            : nightStats.goals < nightStats.against
-              ? 'il saldo chiede più efficacia e più tenuta del risultato'
-              : 'la serata chiude in equilibrio anche nelle reti'}
-          .
+          {cover.balance}
         </p>
-        {coverPlayer && (
-          <p>{buildTrial(coverPlayer, selectedNight.day).praise}</p>
-        )}
+        {cover.note && <p>{cover.note}</p>}
         <MatchStrip matches={selectedNight.games} />
       </details>
     </article>
   );
 }
 
-function CoverSide({ nightStats, selectedNight }) {
+function CoverSide({ cover, nightStats, selectedNight }) {
   return (
     <aside className="paper-cover-side">
       <div className="paper-cover-award">
         <Trophy size={20} />
-        <span>
-          {nightStats.winners.length > 1
-            ? 'I MIGLIORI DELLE GARE REGISTRATE'
-            : 'IL MIGLIORE DELLE GARE REGISTRATE'}
-        </span>
+        <span>{cover.awardLabel}</span>
         <strong>
           {nightStats.winners.length
             ? nightStats.winners.map((winner) => winner.name).join(' + ')
@@ -77,27 +55,20 @@ function CoverSide({ nightStats, selectedNight }) {
           NELLA SERATA
         </span>
       </div>
-      <p>
-        {nightStats.wins > nightStats.losses
-          ? 'Il bilancio sorride. Il tribunale, però, apre lo stesso.'
-          : nightStats.losses > nightStats.wins
-            ? 'Il bilancio punge. Le cifre decidono chi merita l’applauso.'
-            : 'Il bilancio resta in equilibrio. Gli spunti per parlarne, molto meno.'}
-      </p>
+      <p>{cover.closing}</p>
     </aside>
   );
 }
 
-export function CoverStory({ cover, coverPlayer, nightStats, selectedNight }) {
+export function CoverStory({ cover, nightStats, selectedNight }) {
   return (
     <div className="paper-cover">
-      <CoverLead
+      <CoverLead cover={cover} selectedNight={selectedNight} />
+      <CoverSide
         cover={cover}
-        coverPlayer={coverPlayer}
         nightStats={nightStats}
         selectedNight={selectedNight}
       />
-      <CoverSide nightStats={nightStats} selectedNight={selectedNight} />
     </div>
   );
 }

@@ -57,7 +57,7 @@ function LeaderList({ cards, setSelectedName }) {
   );
 }
 
-function CardDialog({ selectedCard, members, setSelectedName }) {
+function CardDialog({ data, selectedCard, members, setSelectedName }) {
   return (
     <div
       className="card-dialog-backdrop"
@@ -117,6 +117,7 @@ function CardDialog({ selectedCard, members, setSelectedName }) {
             member={selectedCard.member}
             players={members}
             recent={selectedCard.profile}
+            data={data}
           />
           <small>
             {
@@ -134,7 +135,7 @@ function CardDialog({ selectedCard, members, setSelectedName }) {
  * "La rosa": classifica dei Pro per gol + assist e finestra con la pagella.
  * `members` è la rosa già ordinata, `matches` le ultime gare EA.
  */
-export function Squad({ members, matches }) {
+export function Squad({ members, matches, data }) {
   const [selectedName, setSelectedName] = useState(null);
   const cards = members.map((member) => ({
     member,
@@ -181,6 +182,7 @@ export function Squad({ members, matches }) {
       </p>
       {selectedCard && (
         <CardDialog
+          data={data}
           selectedCard={selectedCard}
           members={members}
           setSelectedName={setSelectedName}

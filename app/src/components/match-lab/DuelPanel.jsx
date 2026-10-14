@@ -168,8 +168,8 @@ export function DuelPanel({
             duelSummaryB={duelSummaryB}
           />
           <div className="lab-story">
-            <span>IL VERDETTO? DIPENDE DAL COMPITO.</span>
-            <h3>Nessun vincitore per decreto.</h3>
+            <span>COME LEGGERE IL CONFRONTO</span>
+            <h3>Il confronto non assolve nessuno.</h3>
             <p>
               Il voto racconta il giudizio EA; gol e assist raccontano
               produzione; passaggi e contrasti raccontano altre parti del

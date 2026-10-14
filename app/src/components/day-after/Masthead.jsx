@@ -9,7 +9,7 @@ export function Masthead() {
       <span>
         LA GAZZETTA DEL CLUB
         <br />
-        CRONACA · PAGELLE · STORIE
+        CRONACA · PAGELLE · VERDETTI
         <br />
         <b>REDAZIONE BILLOCCHI</b>
       </span>
