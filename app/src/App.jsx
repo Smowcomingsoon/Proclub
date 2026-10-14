@@ -1,17 +1,34 @@
-import { useEffect, useLayoutEffect, useMemo } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { DayAfter } from './components/DayAfter.jsx';
-import { MatchArchive } from './components/MatchArchive.jsx';
-import { MatchLab } from './components/MatchLab.jsx';
-import { Overview } from './components/Overview.jsx';
-import { PerformanceGrades } from './components/PerformanceGrades.jsx';
-import { PlayerPage } from './components/PlayerPage.jsx';
-import { SiteFooter } from './components/SiteFooter.jsx';
 import { SiteHeader } from './components/SiteHeader.jsx';
-import { Squad } from './components/Squad.jsx';
-import { StatsPage } from './components/StatsPage.jsx';
 import { useRoute } from './lib/route.js';
 import { toNumber } from './lib/stats.js';
 import { useClubData } from './lib/useClubData.js';
+
+const BelowFold = lazy(() => import('./components/BelowFold.jsx'));
+const SiteFooter = lazy(() =>
+  import('./components/SiteFooter.jsx').then((module) => ({
+    default: module.SiteFooter,
+  })),
+);
+const PlayerPage = lazy(() =>
+  import('./components/PlayerPage.jsx').then((module) => ({
+    default: module.PlayerPage,
+  })),
+);
+const StatsPage = lazy(() =>
+  import('./components/StatsPage.jsx').then((module) => ({
+    default: module.StatsPage,
+  })),
+);
 
 /** Rosa ordinata per gol + assist, poi gol, presenze e nome. */
 const sortMembers = (members) =>
@@ -29,6 +46,8 @@ function App() {
   const { data, connection, freshKeys, lastSync, refreshing, refresh } =
     useClubData();
   const route = useRoute();
+  const [belowReady, setBelowReady] = useState(false);
+  const onBelowReady = useCallback(() => setBelowReady(true), []);
   const club = data.club[0];
   const playerKnown =
     route.view !== 'player' ||
@@ -60,14 +79,22 @@ function App() {
   );
   return (
     <div className="site">
-      <SiteHeader connection={connection} view={view} />
+      <SiteHeader
+        connection={connection}
+        view={view}
+        contentReady={belowReady}
+      />
       {view === 'stats' ? (
         <main className="pg-main">
-          <StatsPage data={data} />
+          <Suspense fallback={null}>
+            <StatsPage data={data} />
+          </Suspense>
         </main>
       ) : view === 'player' ? (
         <main className="pg-main">
-          <PlayerPage data={data} name={route.name} />
+          <Suspense fallback={null}>
+            <PlayerPage data={data} name={route.name} />
+          </Suspense>
         </main>
       ) : (
       <main id="top">
@@ -76,29 +103,31 @@ function App() {
           members={data.members.members}
           matches={data.matchHistory || recentMatches}
         />
-        <Overview
-          data={data}
-          club={club}
-          members={sortedMembers}
-          matches={recentMatches}
-          refresh={refresh}
-          refreshing={refreshing}
-        />
-        <PerformanceGrades
-          members={data.members.members}
-          matches={data.matchHistory || recentMatches}
-        />
-        <Squad data={data} members={sortedMembers} matches={recentMatches} />
-        <MatchLab data={data} matches={recentMatches} />
-        <MatchArchive matches={recentMatches} />
+        <Suspense
+          fallback={<div className="below-fold-pending" aria-hidden="true" />}
+        >
+          <BelowFold
+            data={data}
+            club={club}
+            members={data.members.members}
+            sortedMembers={sortedMembers}
+            matches={recentMatches}
+            matchHistory={data.matchHistory || recentMatches}
+            refresh={refresh}
+            refreshing={refreshing}
+            onReady={onBelowReady}
+          />
+        </Suspense>
       </main>
       )}
+      <Suspense fallback={null}>
       <SiteFooter
         connection={connection}
         data={data}
         freshKeys={freshKeys}
         lastSync={lastSync}
       />
+      </Suspense>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { SectionNav } from './SectionNav.jsx';
 
-export function SiteHeader({ connection, view = 'home' }) {
+export function SiteHeader({ connection, view = 'home', contentReady }) {
   return (
     <header className="nav">
       <a className="brand" href={view === 'home' ? '#top' : '#giorno-dopo'}>
@@ -8,6 +8,8 @@ export function SiteHeader({ connection, view = 'home' }) {
           className="site-logo"
           src="/logo-billocchi.svg"
           alt="Stemma BILLOCCHI CLUB"
+          width="52"
+          height="52"
         />
         <span>
           {'BILLOCCHI '}
@@ -15,7 +17,7 @@ export function SiteHeader({ connection, view = 'home' }) {
           <small>FC 27 / CLUB INTELLIGENCE</small>
         </span>
       </a>
-      <SectionNav key={view === 'home' ? 'home' : 'page'} view={view} />
+      <SectionNav key={view === 'home' ? 'home' : 'page'} view={view} contentReady={contentReady} />
       <div className="status">
         <i className={connection === 'yes' ? 'active' : ''} />
         {connection === 'yes'

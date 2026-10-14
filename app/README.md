@@ -82,3 +82,27 @@ quindi non c'è HTML pre-renderizzato.
 - Possibili passi successivi: sostituire il chunk three.js con `three` da npm
   (ricostruendo la scena dai sorgenti), test sui calcoli in `src/lib/` (`test/app-lib.test.mjs`, eseguiti da `npm test` alla radice),
   prerendering statico per SEO/anteprime.
+
+## Prestazioni e mobile
+
+- **Code splitting** (`vite.config.js`, `App.jsx`): l'ingresso carica solo header e "Il giorno dopo";
+  `BelowFold` (tabellone, voti, rosa, spogliatoio, archivio), `SiteFooter` e `CardDialog` sono chunk
+  lazy (il dialog si precarica quando il browser è libero), la scena 3D resta lazy. `react` e lo
+  snapshot dati (`club-fallback`) hanno chunk propri. `SectionNav` ricalcola ancore e fade-in quando
+  `BelowFold` è montato (link `#voti` ecc. funzionano anche a freddo).
+- **Misure** (build, gzip): ingresso 567 kB (143) → 116 kB (40) + react 219 kB (68) + dati 189 kB (23);
+  nessun chunk d'ingresso sopra 500 kB. Scena 3D 640 kB, solo on demand.
+  Playwright, 390 px, CPU x4, rete 1,6 Mbps/150 ms, mediana di 5: prima render 2256 → 1936 ms,
+  FCP 1996 → 1784 ms, byte trasferiti a caricamento completo 1,09 MB → 0,51 MB.
+- **Immagini**: miniature 144x216 per la classifica (`public/cards/thumb/`, 7-9 kB, al posto di
+  figurine 768x1152 da ~125 kB l'una); ritratto we_belen ridotto a 600 px (216 → 83 kB);
+  `loading="lazy"`/`decoding="async"`/`width`/`height` sulle immagini non critiche; `preconnect` ai
+  font e preload del solo stemma.
+- **Mobile** (`src/mobile.css`, solo override dopo `styles.css`; sopra 700 px lo stile desktop è
+  invariato): bersagli di tocco da 44 px (nav, select, summary, link, chiusura dialog), tabelle voti e
+  match studio con prima colonna fissa e didascalia leggibile, link flottante "Statistiche avanzate"
+  più piccolo e nascosto con il dialog aperto, contrasti sotto soglia corretti. Nessuno scroll
+  orizzontale a 360/390/430/768/1280 px.
+- **`prefers-reduced-motion`**: già coperto da `styles.css` (animazioni a 0,01 ms, reveal e fade
+  visibili), `CountUp`, `SectionNav` (scroll istantaneo) e scena 3D (ferma); verificato che non resti
+  nessuna animazione infinita in esecuzione.

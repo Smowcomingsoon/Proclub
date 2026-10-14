@@ -25,7 +25,15 @@ function describeSync({ connection, freshKeys, lastSync, capturedAt }) {
 export function SiteFooter({ connection, data, freshKeys, lastSync }) {
   return (
     <footer>
-      <img className="site-logo" src="/logo-billocchi.svg" alt="" />
+      <img
+        className="site-logo"
+        src="/logo-billocchi.svg"
+        alt=""
+        width="40"
+        height="40"
+        loading="lazy"
+        decoding="async"
+      />
       <strong>BILLOCCHI CLUB · FC 27</strong>
       <p>
         Dati EA SPORTS FC Clubs. Sincronizzazione salvata ogni settimana;

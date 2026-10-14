@@ -43,7 +43,7 @@ const PAGES = [
 ];
 
 /** Navigazione tra le sezioni: evidenzia quella visibile, scroll morbido e fade-in allo scroll. */
-export function SectionNav({ view = 'home' }) {
+export function SectionNav({ view = 'home', contentReady }) {
   const [activeId, setActiveId] = useState('giorno-dopo');
   const navRef = useRef(null);
   useEffect(() => {
@@ -142,7 +142,7 @@ export function SectionNav({ view = 'home' }) {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, [view]);
+  }, [view, contentReady]);
   const currentId =
     view === 'home' ? activeId : view === 'stats' ? 'statistiche' : null;
   useEffect(() => {
