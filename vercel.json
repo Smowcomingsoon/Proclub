@@ -1,1 +1,1 @@
-{"outputDirectory":"site","rewrites":[{"source":"/api/data","destination":"/data.json"}]}
+{"outputDirectory":"site","functions":{"api/data.js":{"includeFiles":"data/data.json","maxDuration":15}}}
