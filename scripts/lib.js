@@ -1,0 +1,54 @@
+const fs = require('node:fs');
+const path = require('node:path');
+
+function validate({club, members, matches}, clubId) {
+  if (!Array.isArray(club) || String(club[0]?.clubId) !== String(clubId)) throw new Error('Statistiche club non valide');
+  if (!Number.isFinite(Number(club[0].gamesPlayed))) throw new Error('gamesPlayed non valido');
+  if (!Array.isArray(members?.members) || !members.members.length) throw new Error('Membri vuoti');
+  if (!Array.isArray(matches)) throw new Error('Partite non valide');
+}
+
+function mergeHistory(history, matches) {
+  const seen = new Set(history.map(m => String(m.matchId)));
+  const fresh = matches.filter(m => !seen.has(String(m.matchId)));
+  const merged = [...fresh, ...history].sort((a, b) => b.timestamp - a.timestamp);
+  return {history: merged, fresh};
+}
+
+function seasonKey(ts) {
+  const d = new Date((ts - 6 * 3600) * 1000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function archiveMatches(dir, history, clubId) {
+  const index = [];
+  for (const m of history) {
+    const c = m.clubs?.[clubId];
+    const opp = Object.entries(m.clubs || {}).find(([id]) => id !== String(clubId));
+    index.push({
+      matchId: String(m.matchId), timestamp: m.timestamp, month: seasonKey(m.timestamp),
+      opponent: opp?.[1]?.details?.name ?? null,
+      goalsFor: Number(c?.goals ?? 0), goalsAgainst: Number(c?.goalsAgainst ?? 0), result: String(c?.result ?? ''),
+    });
+  }
+  fs.mkdirSync(dir, {recursive: true});
+  fs.writeFileSync(path.join(dir, 'index.json'), JSON.stringify(index));
+  fs.writeFileSync(path.join(dir, '..', '..', 'site', 'archive.json'), JSON.stringify(index));
+  return index;
+}
+
+async function notify(fresh, clubId) {
+  if (!fresh.length) return;
+  const lines = fresh.map(m => {
+    const c = m.clubs?.[clubId];
+    const opp = Object.entries(m.clubs || {}).find(([id]) => id !== String(clubId))?.[1]?.details?.name ?? '?';
+    return `${c?.goals}–${c?.goalsAgainst} vs ${opp}`;
+  });
+  const text = `BILLOCCHI CLUB: ${fresh.length} nuove partite\n${lines.join('\n')}`;
+  const jobs = [];
+  if (process.env.DISCORD_WEBHOOK) jobs.push(fetch(process.env.DISCORD_WEBHOOK, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({content: text})}));
+  if (process.env.TELEGRAM_TOKEN && process.env.TELEGRAM_CHAT) jobs.push(fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({chat_id: process.env.TELEGRAM_CHAT, text})}));
+  await Promise.allSettled(jobs);
+}
+
+module.exports = {validate, mergeHistory, seasonKey, archiveMatches, notify};
