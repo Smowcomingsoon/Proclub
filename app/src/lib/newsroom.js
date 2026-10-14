@@ -1,14 +1,21 @@
 import { CLUB_ID } from './constants.js';
-import { formatMatchTime, formatRating, formatScore } from './format.js';
+import {
+  formatLongDate,
+  formatMatchTime,
+  formatRating,
+  formatScore,
+} from './format.js';
 import { buildGradeComments } from './grades.js';
 import { getOpponentName, getResultLetter } from './matches.js';
 import { POSITION_ABBREVIATIONS } from './positions.js';
 import { mean, toFiniteNumber } from './stats.js';
 
+/** Somma dei codici carattere: seme deterministico per scegliere i testi. */
 const charCodeSum = (text) =>
   [...text].reduce((total, char) => total + char.charCodeAt(0), 0);
 
-export function buildCover(players, winners, clubGoals, day = '') {
+/** Titolo e sommario della copertina della serata. */
+export function buildCover(players, winners, day = '') {
   const leader =
     winners[0] ||
     [...players].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1))[0];
@@ -169,6 +176,7 @@ export function buildCover(players, winners, clubGoals, day = '') {
   };
 }
 
+/** Fino a tre "svolte della notte": vittoria più larga, risposta, serie positiva, gara in bilico. */
 export function buildTurningPoints(games) {
   const sorted = [...games].sort((a, b) => a.timestamp - b.timestamp);
   const points = [];
@@ -252,6 +260,7 @@ export function buildTurningPoints(games) {
   return points.slice(0, 3);
 }
 
+/** Elogio, accusa, prova e verdetto ironico per un Pro. */
 export function buildTrial(
   player,
   salt,
@@ -341,6 +350,7 @@ export function buildTrial(
   };
 }
 
+/** Un "processo" per ciascun Pro, evitando accuse identiche. */
 export function buildTrials(players, salt) {
   const usedCharges = new Set();
   return players.map((player) => {
@@ -367,6 +377,7 @@ export function buildTrials(players, salt) {
   });
 }
 
+/** Andamento dei voti EA di un Pro nell'ultimo reparto giocato (ultime 12 gare con voto). */
 export function buildRoleTrend(playerName, matches) {
   const appearances = [
     ...new Map(
@@ -420,4 +431,20 @@ export function buildRoleTrend(playerName, matches) {
     recentCount: points.length - half,
     delta: recent - previous,
   };
+}
+
+/** Testo da copiare per condividere l'edizione della serata nella chat del club. */
+export function buildShareText({ night, nightStats, cover, trials }) {
+  if (!night) return '';
+  const { winners } = nightStats;
+  const bestOfNight = winners.length
+    ? `Migliore delle gare registrate: ${winners.map((winner) => winner.name).join(' + ')} · media EA ${formatRating(winners[0].rating)}.\n`
+    : '';
+  const verdicts = trials
+    .map(
+      ({ player, trial }) =>
+        `\n${player.name} · ${formatRating(player.rating)} EA\nElogio: ${trial.praise}\nAccusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
+    )
+    .join('\n');
+  return `BILLOCCHI · IL GIORNO DOPO\nSerata del ${formatLongDate(night.day)}\n${cover.title}\n${cover.deck}\n${night.games.length} gare: ${nightStats.wins}V ${nightStats.draws}P ${nightStats.losses}S · ${nightStats.goals} gol fatti, ${nightStats.against} subiti.\n${bestOfNight}${verdicts}\nhttps://billocchi-club.kr3n.chatgpt.site/`;
 }

@@ -166,9 +166,11 @@ const ADANI_QUOTES = [
   },
 ];
 
+/** Hash deterministico (stesso testo, stesso ordine) usato per distribuire le citazioni. */
 const hashString = (text) =>
   [...text].reduce((total, char) => (total * 31 + char.charCodeAt(0)) >>> 0, 7);
 
+/** Categoria di citazione adatta al profilo: roast, assist, goal, duel, quality o welcome. */
 export function classifyProfile(profile) {
   return profile.games
     ? (profile.rating !== null && profile.rating < 6.5) ||
@@ -187,6 +189,7 @@ export function classifyProfile(profile) {
     : 'welcome';
 }
 
+/** Abbina una citazione a ciascun Pro (senza ripetizioni finché possibile); `salt` varia l'ordine. */
 export function assignQuotes(players, salt) {
   const usedIds = new Set();
   return new Map(
@@ -207,6 +210,7 @@ export function assignQuotes(players, salt) {
   );
 }
 
+/** Riduce un membro EA ai soli campi usati per scegliere la citazione. */
 export function toQuotePlayer(member) {
   const count = (value) => Number(value) || 0;
   return {

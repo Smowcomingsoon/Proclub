@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+/** Contenitore che compare (classe `visible`) quando entra nel viewport. */
 export function Reveal({ children, className = '' }) {
   const ref = useRef(null);
   useEffect(() => {

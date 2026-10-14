@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatRating } from '../lib/format.js';
 import { buildGradeComments, buildGradeRows } from '../lib/grades.js';
 
+/** Tabella dei voti EA (stagione, ultima serata, ultime 15 gare) con commento per Pro. */
 export function PerformanceGrades({ members, matches }) {
   const [sortKey, setSortKey] = useState('name');
   const [openName, setOpenName] = useState(null);

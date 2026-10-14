@@ -1,5 +1,6 @@
 import { perGame, toNumber } from './stats.js';
 
+/** Ritratto testuale della stagione di un Pro; si arricchisce a 5, 15 e 30 presenze. */
 export function buildSeasonProfile(member, members, recent) {
   const games = toNumber(member.gamesPlayed);
   const goals = toNumber(member.goals);

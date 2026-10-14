@@ -1,5 +1,6 @@
 import { formatProOverall } from '../lib/format.js';
 
+/** Figurina da collezione di un Pro (tier e "on fire" dal profilo calcolato). */
 export function CollectorCard({ member, profile, onClick }) {
   const stats = [
     [member.goals, 'GOL'],

@@ -1,6 +1,7 @@
 import { groupByNight, summarizeNight } from './matches.js';
 import { toNumber } from './stats.js';
 
+/** Frasi "cosa ha portato" / "dove serve qualità" per un Pro, scelte in modo deterministico da `variant`. */
 export function buildGradeComments(stats, variant = 0) {
   const pick = (options) => options[variant % options.length];
   const praise = [];
@@ -110,6 +111,7 @@ export function buildGradeComments(stats, variant = 0) {
   };
 }
 
+/** Voti EA per Pro: stagione, ultima serata e ultime 15 gare in archivio. */
 export function buildGradeRows(members, matches) {
   const uniqueMatches = [
     ...new Map(matches.map((match) => [match.matchId, match])).values(),

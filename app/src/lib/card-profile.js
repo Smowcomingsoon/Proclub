@@ -2,6 +2,10 @@ import { CLUB_ID } from './constants.js';
 import { POSITION_ABBREVIATIONS } from './positions.js';
 import { toNumber } from './stats.js';
 
+/**
+ * Indice di forma e colore della figurina: usa le gare recenti nel reparto più
+ * giocato; se mancano, ripiega sui totali stagionali.
+ */
 export function computeCardProfile(member, matches) {
   const appearances = [...matches]
     .sort((a, b) => toNumber(b.timestamp) - toNumber(a.timestamp))

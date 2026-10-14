@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+/** Numero che sale da 0 al valore (salta l'animazione con prefers-reduced-motion). */
 export function CountUp({ value }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {

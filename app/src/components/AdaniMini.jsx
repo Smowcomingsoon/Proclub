@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+/** Scena 3D lazy (three.js): parte quando entra nel viewport e si può mettere in pausa. */
 export function AdaniMini() {
   const canvasRef = useRef(null);
   const [status, setStatus] = useState('loading');

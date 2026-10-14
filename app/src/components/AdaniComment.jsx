@@ -1,6 +1,7 @@
 import { AdaniMini } from './AdaniMini.jsx';
 import { classifyProfile } from '../lib/adani-quotes.js';
 
+/** Commento "della redazione" con la citazione abbinata e il riepilogo del Pro. */
 export function AdaniComment({ player, quote }) {
   const summary = player.games
     ? `${player.name}: ${player.goals} gol e ${player.assists} assist in ${player.games} presenze${player.rating === null ? '' : `, media EA ${player.rating.toFixed(2)}`}. ` +

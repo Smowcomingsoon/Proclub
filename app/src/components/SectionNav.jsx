@@ -31,6 +31,7 @@ const SECTIONS = [
   },
 ];
 
+/** Navigazione tra le sezioni: evidenzia quella visibile, scroll morbido e fade-in allo scroll. */
 export function SectionNav() {
   const [activeId, setActiveId] = useState('giorno-dopo');
   const navRef = useRef(null);

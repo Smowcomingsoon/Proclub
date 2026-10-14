@@ -1,13 +1,16 @@
 import { CLUB_ID } from './constants.js';
 import { toFiniteNumber, toNumber } from './stats.js';
 
+/** Prestazioni dei Pro del BILLOCCHI CLUB in una gara EA. */
 export const getClubPlayers = (match) =>
   Object.values(match.players?.[CLUB_ID] || {}).filter((player) => !!player);
 
+/** Nome dell'avversario in una gara EA. */
 export const getOpponentName = (match) =>
   Object.entries(match.clubs).find(([clubId]) => clubId !== CLUB_ID)?.[1]
     ?.details?.name || 'Avversario';
 
+/** Data (YYYY-MM-DD) di un timestamp in secondi, nel fuso di Roma. */
 function getRomeDate(timestamp) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Rome',
@@ -20,6 +23,7 @@ function getRomeDate(timestamp) {
     .join('-');
 }
 
+/** Giorno della "serata": le gare tra mezzanotte e le 06:00 italiane contano per il giorno prima. */
 function getSessionDay(timestamp) {
   const date = new Date(toNumber(timestamp) * 1e3);
   const hour = Number(
@@ -36,6 +40,7 @@ function getSessionDay(timestamp) {
   return previousDay.toISOString().slice(0, 10);
 }
 
+/** Raggruppa le gare per serata, dalla più recente; dentro ogni serata dalla prima all'ultima. */
 export function groupByNight(matches) {
   const matchesById = new Map(
     matches
@@ -57,6 +62,10 @@ export function groupByNight(matches) {
     }));
 }
 
+/**
+ * Aggrega le prestazioni dei Pro su un insieme di gare: totali per giocatore,
+ * miglior media EA (`winners`), record e gol del club.
+ */
 export function summarizeNight(matches) {
   const byPlayer = new Map();
   for (const match of matches)
@@ -177,6 +186,7 @@ export function summarizeNight(matches) {
   };
 }
 
+/** Esito per il club: V (vittoria), P (pareggio), S (sconfitta). */
 export const getResultLetter = (match) => {
   const own = match.clubs[CLUB_ID];
   return toFiniteNumber(own.goals) > toFiniteNumber(own.goalsAgainst)

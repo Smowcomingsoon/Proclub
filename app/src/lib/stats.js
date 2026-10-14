@@ -34,9 +34,9 @@ export function topPerformer(players, key, minimum = 1) {
   return [...players]
     .filter((player) => toNumber(player[key]) >= minimum)
     .sort(
-      (event, b) =>
-        toNumber(b[key]) - toNumber(event[key]) ||
-        toNumber(b.rating) - toNumber(event.rating),
+      (a, b) =>
+        toNumber(b[key]) - toNumber(a[key]) ||
+        toNumber(b.rating) - toNumber(a.rating),
     )[0];
 }
 
