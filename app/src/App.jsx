@@ -21,139 +21,205 @@ import {
 } from 'lucide-react';
 import { Swords } from './lib/icons.js';
 import './styles.css';
-const re = fallbackJson;
-const j = (e) => Number(e || 0);
-const M = {
+const fallbackData = fallbackJson;
+const toNumber = (value) => Number(value || 0);
+const POSITION_NAMES = {
   forward: 'Attacco',
   midfielder: 'Centrocampo',
   defender: 'Difesa',
   goalkeeper: 'Porta',
 };
-const ie = (e) => Object.values(e.players?.['70375'] || {}).filter((e) => !!e);
-const N = (e) =>
-  Object.entries(e.clubs).find(([e]) => e !== '70375')?.[1]?.details?.name ||
-  'Avversario';
-const ae = (e) =>
-  e.length ? e.reduce((e, t) => e + j(t.rating), 0) / e.length : null;
-const P = (e, t) => e.reduce((e, n) => e + j(n[t]), 0);
-const oe = (e, t) => (t ? Math.round((e / t) * 100) : null);
-const se = (e, t = 0) => (e === null ? '—' : e.toFixed(t));
-function ce(e) {
+const getClubPlayers = (match) =>
+  Object.values(match.players?.['70375'] || {}).filter((player) => !!player);
+const getOpponentName = (match) =>
+  Object.entries(match.clubs).find(([clubId]) => clubId !== '70375')?.[1]
+    ?.details?.name || 'Avversario';
+const averageRating = (players) =>
+  players.length
+    ? players.reduce((total, player) => total + toNumber(player.rating), 0) /
+      players.length
+    : null;
+const sumBy = (items, key) =>
+  items.reduce((total, item) => total + toNumber(item[key]), 0);
+const percentage = (part, whole) =>
+  whole ? Math.round((part / whole) * 100) : null;
+const formatNumber = (value, digits = 0) =>
+  value === null ? '—' : value.toFixed(digits);
+function summarizePlayers(players) {
   return {
-    games: e.length,
-    rating: ae(e),
-    goals: P(e, 'goals'),
-    assists: P(e, 'assists'),
-    shots: P(e, 'shots'),
-    passes: P(e, 'passesmade'),
-    attempts: P(e, 'passattempts'),
-    tackles: P(e, 'tacklesmade'),
-    saves: P(e, 'saves'),
-    pass: oe(P(e, 'passesmade'), P(e, 'passattempts')),
+    games: players.length,
+    rating: averageRating(players),
+    goals: sumBy(players, 'goals'),
+    assists: sumBy(players, 'assists'),
+    shots: sumBy(players, 'shots'),
+    passes: sumBy(players, 'passesmade'),
+    attempts: sumBy(players, 'passattempts'),
+    tackles: sumBy(players, 'tacklesmade'),
+    saves: sumBy(players, 'saves'),
+    pass: percentage(
+      sumBy(players, 'passesmade'),
+      sumBy(players, 'passattempts'),
+    ),
   };
 }
-function le(e, t, n = 1) {
-  return [...e]
-    .filter((e) => j(e[t]) >= n)
-    .sort((e, n) => j(n[t]) - j(e[t]) || j(n.rating) - j(e.rating))[0];
+function topPerformer(players, key, minimum = 1) {
+  return [...players]
+    .filter((player) => toNumber(player[key]) >= minimum)
+    .sort(
+      (event, b) =>
+        toNumber(b[key]) - toNumber(event[key]) ||
+        toNumber(b.rating) - toNumber(event.rating),
+    )[0];
 }
-function Tag_ue({ label: e, player: t, detail: n, icon: r }) {
+function LabAward({ label, player, detail, icon }) {
   return (
     <article className="lab-award">
-      {r}
-      <span>{e}</span>
-      <strong>{t?.playername || 'Non assegnato'}</strong>
+      {icon}
+      <span>{label}</span>
+      <strong>{player?.playername || 'Non assegnato'}</strong>
       <p>
-        {t ? n : 'Nessuna prestazione soddisfa il criterio in questa gara.'}
+        {player
+          ? detail
+          : 'Nessuna prestazione soddisfa il criterio in questa gara.'}
       </p>
     </article>
   );
 }
-function Tag_de({ matches: e }) {
-  let t = [...e].sort((e, t) => j(t.timestamp) - j(e.timestamp)),
-    [n, r] = useState('studio'),
-    [i, a] = useState(''),
-    [o, s] = useState('rating'),
-    [c, l] = useState(''),
-    [d, f] = useState(''),
-    [p, m] = useState(''),
-    [h, g] = useState(''),
-    [_, y] = useState('midfielder'),
-    [C, w] = useState('');
-  if (!t.length)
+function MatchLab({ matches }) {
+  let sortedMatches = [...matches].sort(
+      (a, b) => toNumber(b.timestamp) - toNumber(a.timestamp),
+    ),
+    [tab, setTab] = useState('studio'),
+    [selectedMatchId, setSelectedMatchId] = useState(''),
+    [sortKey, setSortKey] = useState('rating'),
+    [formPlayerChoice, setFormPlayerChoice] = useState(''),
+    [formRoleChoice, setFormRoleChoice] = useState(''),
+    [duelChoiceA, setDuelChoiceA] = useState(''),
+    [duelChoiceB, setDuelChoiceB] = useState(''),
+    [duelRole, setDuelRole] = useState('midfielder'),
+    [copyStatus, setCopyStatus] = useState('');
+  if (!sortedMatches.length)
     return (
       <section className="content match-lab" id="spogliatoio">
         <h2>Lo spogliatoio.</h2>
         <p>Le pagelle si accendono quando EA rende disponibili le partite.</p>
       </section>
     );
-  let T = t.find((e) => e.matchId === i) || t[0],
-    E = ie(T),
-    O = T.clubs[70375],
-    ne = t.flatMap(ie),
-    re = [...new Set(ne.map((e) => e.playername))].sort((e, t) =>
-      e.localeCompare(t),
-    ),
-    P = re.includes(c) ? c : re[0],
-    de = [...new Set(ne.filter((e) => e.playername === P).map((e) => e.pos))],
-    fe = de.includes(d) ? d : de[0],
-    pe = [...t].reverse().map((e) => ({
-      m: e,
-      p: ie(e).find((e) => e.playername === P && e.pos === fe),
+  let selectedMatch =
+      sortedMatches.find(
+        (sortedMatch) => sortedMatch.matchId === selectedMatchId,
+      ) || sortedMatches[0],
+    matchPlayers = getClubPlayers(selectedMatch),
+    ownClub = selectedMatch.clubs[70375],
+    allAppearances = sortedMatches.flatMap(getClubPlayers),
+    playerNames = [
+      ...new Set(allAppearances.map((appearance) => appearance.playername)),
+    ].sort((a, b) => a.localeCompare(b)),
+    formPlayer = playerNames.includes(formPlayerChoice)
+      ? formPlayerChoice
+      : playerNames[0],
+    formRoles = [
+      ...new Set(
+        allAppearances
+          .filter((appearance) => appearance.playername === formPlayer)
+          .map((appearance) => appearance.pos),
+      ),
+    ],
+    formRole = formRoles.includes(formRoleChoice)
+      ? formRoleChoice
+      : formRoles[0],
+    formGames = [...sortedMatches].reverse().map((sortedMatch) => ({
+      match: sortedMatch,
+      entry: getClubPlayers(sortedMatch).find(
+        (player) => player.playername === formPlayer && player.pos === formRole,
+      ),
     })),
-    me = pe.flatMap((e) => (e.p ? [e.p] : [])),
-    F = ce(me),
-    he = me.at(-1),
-    ge = me.slice(0, -1),
-    _e = ae(ge),
-    I = he && _e !== null ? j(he.rating) - _e : null,
-    L = [...E].sort(
-      (e, t) =>
-        j(t.rating) - j(e.rating) ||
-        j(t.goals) + j(t.assists) - j(e.goals) - j(e.assists),
+    formEntries = formGames.flatMap((game) => (game.entry ? [game.entry] : [])),
+    formSummary = summarizePlayers(formEntries),
+    latestEntry = formEntries.at(-1),
+    previousEntries = formEntries.slice(0, -1),
+    previousAverage = averageRating(previousEntries),
+    ratingDelta =
+      latestEntry && previousAverage !== null
+        ? toNumber(latestEntry.rating) - previousAverage
+        : null,
+    topRated = [...matchPlayers].sort(
+      (a, b) =>
+        toNumber(b.rating) - toNumber(a.rating) ||
+        toNumber(b.goals) +
+          toNumber(b.assists) -
+          toNumber(a.goals) -
+          toNumber(a.assists),
     )[0],
-    R = E.find((e) => j(e.mom) > 0),
-    ve = le(E, 'goals'),
-    z = le(E, 'assists'),
-    B = le(E, 'tacklesmade'),
-    V = [...E]
-      .filter((e) => j(e.passattempts) >= 10)
+    mvp = matchPlayers.find((player) => toNumber(player.mom) > 0),
+    topScorer = topPerformer(matchPlayers, 'goals'),
+    topAssister = topPerformer(matchPlayers, 'assists'),
+    topTackler = topPerformer(matchPlayers, 'tacklesmade'),
+    bestPasser = [...matchPlayers]
+      .filter((player) => toNumber(player.passattempts) >= 10)
       .sort(
-        (e, t) =>
-          j(t.passesmade) / j(t.passattempts) -
-            j(e.passesmade) / j(e.passattempts) || j(t.rating) - j(e.rating),
+        (a, b) =>
+          toNumber(b.passesmade) / toNumber(b.passattempts) -
+            toNumber(a.passesmade) / toNumber(a.passattempts) ||
+          toNumber(b.rating) - toNumber(a.rating),
       )[0],
-    H = ce(E),
-    U =
-      j(O.goals) > j(O.goalsAgainst)
+    nightSummary = summarizePlayers(matchPlayers),
+    outcome =
+      toNumber(ownClub.goals) > toNumber(ownClub.goalsAgainst)
         ? 'VITTORIA'
-        : j(O.goals) < j(O.goalsAgainst)
+        : toNumber(ownClub.goals) < toNumber(ownClub.goalsAgainst)
           ? 'SCONFITTA'
           : 'PAREGGIO',
-    ye = [...E].sort((e, t) =>
-      o === 'passes'
-        ? (j(t.passattempts) ? j(t.passesmade) / j(t.passattempts) : -1) -
-          (j(e.passattempts) ? j(e.passesmade) / j(e.passattempts) : -1)
-        : j(t[o]) - j(e[o]),
+    sortedPlayers = [...matchPlayers].sort((a, b) =>
+      sortKey === 'passes'
+        ? (toNumber(b.passattempts)
+            ? toNumber(b.passesmade) / toNumber(b.passattempts)
+            : -1) -
+          (toNumber(a.passattempts)
+            ? toNumber(a.passesmade) / toNumber(a.passattempts)
+            : -1)
+        : toNumber(b[sortKey]) - toNumber(a[sortKey]),
     ),
-    W = re.filter((e) => ne.some((t) => t.playername === e && t.pos === _)),
-    G = W.includes(p) ? p : W[0],
-    K = W.includes(h) && h !== G ? h : W.find((e) => e !== G),
-    q = ce(ne.filter((e) => e.playername === G && e.pos === _)),
-    J = ce(ne.filter((e) => e.playername === K && e.pos === _)),
-    Y = new Date(j(T.timestamp) * 1e3).toLocaleString('it-IT', {
+    duelCandidates = playerNames.filter((playerName) =>
+      allAppearances.some(
+        (appearance) =>
+          appearance.playername === playerName && appearance.pos === duelRole,
+      ),
+    ),
+    duelPlayerA = duelCandidates.includes(duelChoiceA)
+      ? duelChoiceA
+      : duelCandidates[0],
+    duelPlayerB =
+      duelCandidates.includes(duelChoiceB) && duelChoiceB !== duelPlayerA
+        ? duelChoiceB
+        : duelCandidates.find((duelCandidate) => duelCandidate !== duelPlayerA),
+    duelSummaryA = summarizePlayers(
+      allAppearances.filter(
+        (appearance) =>
+          appearance.playername === duelPlayerA && appearance.pos === duelRole,
+      ),
+    ),
+    duelSummaryB = summarizePlayers(
+      allAppearances.filter(
+        (appearance) =>
+          appearance.playername === duelPlayerB && appearance.pos === duelRole,
+      ),
+    ),
+    dateLabel = new Date(
+      toNumber(selectedMatch.timestamp) * 1e3,
+    ).toLocaleString('it-IT', {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
     });
-  async function be() {
-    let e = `BILLOCCHI CLUB ${O.goals}–${O.goalsAgainst} ${N(T)} · ${Y}\n${U}\nMiglior voto Pro: ${L?.playername || '—'} (${L?.rating || '—'})${R ? `\nMVP EA: ${R.playername}` : ''}\n${ve ? `Bomber: ${ve.playername}, ${ve.goals} gol\n` : ''}${z ? `Regista: ${z.playername}, ${z.assists} assist\n` : ''}Passaggi dei Pro: ${H.passes}/${H.attempts}.\nhttps://billocchi-club.kr3n.chatgpt.site/#spogliatoio`;
+  async function copySummary() {
+    let text = `BILLOCCHI CLUB ${ownClub.goals}–${ownClub.goalsAgainst} ${getOpponentName(selectedMatch)} · ${dateLabel}\n${outcome}\nMiglior voto Pro: ${topRated?.playername || '—'} (${topRated?.rating || '—'})${mvp ? `\nMVP EA: ${mvp.playername}` : ''}\n${topScorer ? `Bomber: ${topScorer.playername}, ${topScorer.goals} gol\n` : ''}${topAssister ? `Regista: ${topAssister.playername}, ${topAssister.assists} assist\n` : ''}Passaggi dei Pro: ${nightSummary.passes}/${nightSummary.attempts}.\nhttps://billocchi-club.kr3n.chatgpt.site/#spogliatoio`;
     try {
-      await navigator.clipboard.writeText(e);
-      w('Copiato: pronto per la chat del club.');
+      await navigator.clipboard.writeText(text);
+      setCopyStatus('Copiato: pronto per la chat del club.');
     } catch {
-      w('Copia manualmente il riepilogo qui sotto.');
+      setCopyStatus('Copia manualmente il riepilogo qui sotto.');
     }
   }
   return (
@@ -168,7 +234,7 @@ function Tag_de({ matches: e }) {
           </p>
         </div>
         <span className="lab-live">
-          <Sparkles size={17} /> {t.length}
+          <Sparkles size={17} /> {sortedMatches.length}
           {' GARE DA ESPLORARE'}
         </span>
       </div>
@@ -181,35 +247,39 @@ function Tag_de({ matches: e }) {
           ['studio', 'Match studio', Trophy],
           ['forma', 'La mia curva', ChartNoAxesCombined],
           ['duello', 'Testa a testa', Swords],
-        ].map(([e, t, i]) => {
-          let Tag_a = i;
+        ].map(([tabId, tabLabel, icon]) => {
+          let Icon = icon;
           return (
             <button
-              key={String(e)}
-              id={`tab-${e}`}
+              key={String(tabId)}
+              id={`tab-${tabId}`}
               role="tab"
-              aria-selected={n === e}
-              aria-controls={`panel-${e}`}
-              tabIndex={n === e ? 0 : -1}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  let t = ['studio', 'forma', 'duello'],
-                    i =
-                      t[(t.indexOf(n) + (e.key === 'ArrowRight' ? 1 : 2)) % 3];
-                  r(i);
-                  document.getElementById(`tab-${i}`)?.focus();
+              aria-selected={tab === tabId}
+              aria-controls={`panel-${tabId}`}
+              tabIndex={tab === tabId ? 0 : -1}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+                  event.preventDefault();
+                  let tabOrder = ['studio', 'forma', 'duello'],
+                    nextTab =
+                      tabOrder[
+                        (tabOrder.indexOf(tab) +
+                          (event.key === 'ArrowRight' ? 1 : 2)) %
+                          3
+                      ];
+                  setTab(nextTab);
+                  document.getElementById(`tab-${nextTab}`)?.focus();
                 }
               }}
-              onClick={() => r(String(e))}
+              onClick={() => setTab(String(tabId))}
             >
-              <Tag_a size={19} />
-              {String(t)}
+              <Icon size={19} />
+              {String(tabLabel)}
             </button>
           );
         })}
       </div>
-      {n === 'studio' && (
+      {tab === 'studio' && (
         <div
           className="lab-panel"
           id="panel-studio"
@@ -220,31 +290,31 @@ function Tag_de({ matches: e }) {
             <label>
               Seleziona la gara
               <select
-                value={T.matchId}
-                onChange={(e) => {
-                  a(e.target.value);
-                  w('');
+                value={selectedMatch.matchId}
+                onChange={(event) => {
+                  setSelectedMatchId(event.target.value);
+                  setCopyStatus('');
                 }}
               >
-                {t.map((e) => (
-                  <option key={e.matchId} value={e.matchId}>
-                    {new Date(j(e.timestamp) * 1e3).toLocaleDateString(
-                      'it-IT',
-                      {
-                        day: 'numeric',
-                        month: 'short',
-                      },
-                    )}
+                {sortedMatches.map((sortedMatch) => (
+                  <option key={sortedMatch.matchId} value={sortedMatch.matchId}>
+                    {new Date(
+                      toNumber(sortedMatch.timestamp) * 1e3,
+                    ).toLocaleDateString('it-IT', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
                     {' · '}
-                    {e.clubs[70375].goals}–{e.clubs[70375].goalsAgainst}
+                    {sortedMatch.clubs[70375].goals}–
+                    {sortedMatch.clubs[70375].goalsAgainst}
                     {' vs '}
-                    {N(e)}
+                    {getOpponentName(sortedMatch)}
                   </option>
                 ))}
               </select>
             </label>
-            <button className="lab-copy" onClick={be}>
-              {C.startsWith('Copiato') ? (
+            <button className="lab-copy" onClick={copySummary}>
+              {copyStatus.startsWith('Copiato') ? (
                 <Check size={17} />
               ) : (
                 <Copy size={17} />
@@ -253,21 +323,21 @@ function Tag_de({ matches: e }) {
             </button>
           </div>
           <p className="lab-copy-status" role="status">
-            {C}
+            {copyStatus}
           </p>
-          {C.startsWith('Copia manualmente') && (
+          {copyStatus.startsWith('Copia manualmente') && (
             <textarea
               aria-label="Riepilogo da copiare"
               readOnly
-              value={`BILLOCCHI CLUB ${O.goals}–${O.goalsAgainst} ${N(T)} · ${Y}\nMiglior voto: ${L?.playername} (${L?.rating})\nhttps://billocchi-club.kr3n.chatgpt.site/#spogliatoio`}
+              value={`BILLOCCHI CLUB ${ownClub.goals}–${ownClub.goalsAgainst} ${getOpponentName(selectedMatch)} · ${dateLabel}\nMiglior voto: ${topRated?.playername} (${topRated?.rating})\nhttps://billocchi-club.kr3n.chatgpt.site/#spogliatoio`}
             />
           )}
           <div className="lab-scoreboard">
             <div>
-              <span className={`lab-outcome ${U}`}>{U}</span>
+              <span className={`lab-outcome ${outcome}`}>{outcome}</span>
               <p>
-                {Y}
-                {j(O.winnerByDnf) > 0
+                {dateLabel}
+                {toNumber(ownClub.winnerByDnf) > 0
                   ? ' · Vittoria per abbandono avversario'
                   : ''}
               </p>
@@ -275,63 +345,65 @@ function Tag_de({ matches: e }) {
                 {'BILLOCCHI CLUB '}
                 <span>
                   {'vs '}
-                  {N(T)}
+                  {getOpponentName(selectedMatch)}
                 </span>
               </h3>
             </div>
             <strong>
-              {O.goals}
+              {ownClub.goals}
               <i>:</i>
-              {O.goalsAgainst}
+              {ownClub.goalsAgainst}
             </strong>
           </div>
           <div className="lab-story">
             <span>IL VERDETTO DELLO SPOGLIATOIO</span>
             <h3>
-              {j(O.goalsAgainst) === 0
+              {toNumber(ownClub.goalsAgainst) === 0
                 ? 'Porta chiusa. Chat aperta.'
-                : j(O.goals) > j(O.goalsAgainst)
+                : toNumber(ownClub.goals) > toNumber(ownClub.goalsAgainst)
                   ? 'Tre punti, qualche brivido.'
-                  : j(O.goals) < j(O.goalsAgainst)
+                  : toNumber(ownClub.goals) < toNumber(ownClub.goalsAgainst)
                     ? 'La rivincita parte da qui.'
                     : 'Equilibrio sul campo. Dibattito in chat.'}
             </h3>
             <p>
-              {L
-                ? `${L.playername} firma il miglior voto tra i Pro (${L.rating}). `
+              {topRated
+                ? `${topRated.playername} firma il miglior voto tra i Pro (${topRated.rating}). `
                 : ''}
-              {z ? `${z.playername} serve ${z.assists} assist. ` : ''}
-              {H.shots
-                ? `${H.goals} gol su ${H.shots} tiri dei Pro: conversione ${oe(H.goals, H.shots)}%.`
+              {topAssister
+                ? `${topAssister.playername} serve ${topAssister.assists} assist. `
+                : ''}
+              {nightSummary.shots
+                ? `${nightSummary.goals} gol su ${nightSummary.shots} tiri dei Pro: conversione ${percentage(nightSummary.goals, nightSummary.shots)}%.`
                 : 'Nessun tiro dei Pro registrato.'}{' '}
-              {H.attempts
-                ? `${H.attempts - H.passes} passaggi tentati non riusciti: un punto concreto da rivedere insieme.`
+              {nightSummary.attempts
+                ? `${nightSummary.attempts - nightSummary.passes} passaggi tentati non riusciti: un punto concreto da rivedere insieme.`
                 : ''}
             </p>
           </div>
           <div className="lab-awards">
-            <Tag_ue
-              label={R ? 'MVP UFFICIALE EA' : 'MIGLIOR VOTO PRO'}
-              player={R || L}
-              detail={`Voto ${(R || L)?.rating} · ${M[(R || L)?.pos || ''] || 'Ruolo EA'}. La copertina è sua.`}
+            <LabAward
+              label={mvp ? 'MVP UFFICIALE EA' : 'MIGLIOR VOTO PRO'}
+              player={mvp || topRated}
+              detail={`Voto ${(mvp || topRated)?.rating} · ${POSITION_NAMES[(mvp || topRated)?.pos || ''] || 'Ruolo EA'}. La copertina è sua.`}
               icon={<Trophy />}
             />
-            <Tag_ue
+            <LabAward
               label="IL CAMERIERE"
-              player={z}
-              detail={`${z?.assists} assist. Ha apparecchiato, gli altri hanno mangiato.`}
+              player={topAssister}
+              detail={`${topAssister?.assists} assist. Ha apparecchiato, gli altri hanno mangiato.`}
               icon={<Sparkles />}
             />
-            <Tag_ue
+            <LabAward
               label="IL BUTTAFUORI"
-              player={B}
-              detail={`${B?.tacklesmade} contrasti riusciti su ${B?.tackleattempts}. Il pallone non passa gratis.`}
+              player={topTackler}
+              detail={`${topTackler?.tacklesmade} contrasti riusciti su ${topTackler?.tackleattempts}. Il pallone non passa gratis.`}
               icon={<Crosshair />}
             />
-            <Tag_ue
+            <LabAward
               label="PIEDI EDUCATI"
-              player={V}
-              detail={`${V?.passesmade}/${V?.passattempts} passaggi (${oe(j(V?.passesmade), j(V?.passattempts))}%). Almeno 10 tentativi per il premio.`}
+              player={bestPasser}
+              detail={`${bestPasser?.passesmade}/${bestPasser?.passattempts} passaggi (${percentage(toNumber(bestPasser?.passesmade), toNumber(bestPasser?.passattempts))}%). Almeno 10 tentativi per il premio.`}
               icon={<Flame />}
             />
           </div>
@@ -339,7 +411,10 @@ function Tag_de({ matches: e }) {
             <h3>La pagella completa.</h3>
             <label>
               Ordina per
-              <select value={o} onChange={(e) => s(e.target.value)}>
+              <select
+                value={sortKey}
+                onChange={(event) => setSortKey(event.target.value)}
+              >
                 <option value="rating">Voto EA</option>
                 <option value="goals">Gol</option>
                 <option value="assists">Assist</option>
@@ -352,8 +427,8 @@ function Tag_de({ matches: e }) {
             <table className="lab-table">
               <caption>
                 {'Prestazioni dei Pro contro '}
-                {N(T)}. PAS indica riusciti/tentati; CTR contrasti
-                riusciti/tentati.
+                {getOpponentName(selectedMatch)}. PAS indica riusciti/tentati;
+                CTR contrasti riusciti/tentati.
               </caption>
               <thead>
                 <tr>
@@ -368,27 +443,34 @@ function Tag_de({ matches: e }) {
                 </tr>
               </thead>
               <tbody>
-                {ye.map((e) => (
-                  <tr key={e.playername}>
+                {sortedPlayers.map((sortedPlayer) => (
+                  <tr key={sortedPlayer.playername}>
                     <th scope="row">
-                      {e.playername}
-                      <small>{M[e.pos] || e.pos}</small>
-                    </th>
-                    <td className="lab-rating">{e.rating}</td>
-                    <td>{e.goals}</td>
-                    <td>{e.assists}</td>
-                    <td>{e.shots}</td>
-                    <td>
-                      {e.passesmade}/{e.passattempts}
+                      {sortedPlayer.playername}
                       <small>
-                        {se(oe(j(e.passesmade), j(e.passattempts)))}
-                        {j(e.passattempts) ? '%' : ''}
+                        {POSITION_NAMES[sortedPlayer.pos] || sortedPlayer.pos}
+                      </small>
+                    </th>
+                    <td className="lab-rating">{sortedPlayer.rating}</td>
+                    <td>{sortedPlayer.goals}</td>
+                    <td>{sortedPlayer.assists}</td>
+                    <td>{sortedPlayer.shots}</td>
+                    <td>
+                      {sortedPlayer.passesmade}/{sortedPlayer.passattempts}
+                      <small>
+                        {formatNumber(
+                          percentage(
+                            toNumber(sortedPlayer.passesmade),
+                            toNumber(sortedPlayer.passattempts),
+                          ),
+                        )}
+                        {toNumber(sortedPlayer.passattempts) ? '%' : ''}
                       </small>
                     </td>
                     <td>
-                      {e.tacklesmade}/{e.tackleattempts}
+                      {sortedPlayer.tacklesmade}/{sortedPlayer.tackleattempts}
                     </td>
-                    <td>{e.saves}</td>
+                    <td>{sortedPlayer.saves}</td>
                   </tr>
                 ))}
               </tbody>
@@ -403,7 +485,7 @@ function Tag_de({ matches: e }) {
           </p>
         </div>
       )}
-      {n === 'forma' && (
+      {tab === 'forma' && (
         <div
           className="lab-panel"
           id="panel-forma"
@@ -414,23 +496,26 @@ function Tag_de({ matches: e }) {
             <label>
               Il tuo Pro
               <select
-                value={P || ''}
-                onChange={(e) => {
-                  l(e.target.value);
-                  f('');
+                value={formPlayer || ''}
+                onChange={(event) => {
+                  setFormPlayerChoice(event.target.value);
+                  setFormRoleChoice('');
                 }}
               >
-                {re.map((e) => (
-                  <option key={e}>{e}</option>
+                {playerNames.map((playerName) => (
+                  <option key={playerName}>{playerName}</option>
                 ))}
               </select>
             </label>
             <label>
               Reparto osservato
-              <select value={fe || ''} onChange={(e) => f(e.target.value)}>
-                {de.map((e) => (
-                  <option key={e} value={e}>
-                    {M[e] || e}
+              <select
+                value={formRole || ''}
+                onChange={(event) => setFormRoleChoice(event.target.value)}
+              >
+                {formRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {POSITION_NAMES[role] || role}
                   </option>
                 ))}
               </select>
@@ -439,51 +524,53 @@ function Tag_de({ matches: e }) {
           <div className="lab-curve-head">
             <div>
               <span className="overline">
-                {M[fe] || 'REPARTO'}
+                {POSITION_NAMES[formRole] || 'REPARTO'}
                 {' / '}
-                {F.games}
+                {formSummary.games}
                 {' PRESENZE'}
               </span>
-              <h3>{P || 'Nessun Pro disponibile'}</h3>
+              <h3>{formPlayer || 'Nessun Pro disponibile'}</h3>
               <p>
-                {I === null
+                {ratingDelta === null
                   ? 'Servono due presenze nello stesso reparto per confrontare l’ultimo voto.'
-                  : `${I >= 0 ? '+' : ''}${I.toFixed(1)} nell’ultima gara rispetto alla media delle ${ge.length} precedenti in questo reparto.`}
+                  : `${ratingDelta >= 0 ? '+' : ''}${ratingDelta.toFixed(1)} nell’ultima gara rispetto alla media delle ${previousEntries.length} precedenti in questo reparto.`}
               </p>
             </div>
             <strong>
-              {se(F.rating, 1)}
+              {formatNumber(formSummary.rating, 1)}
               <small>VOTO MEDIO EA</small>
             </strong>
           </div>
           <div
             className="lab-curve"
-            aria-label={`Voti di ${P} nel reparto ${M[fe]}, dal più vecchio al più recente`}
+            aria-label={`Voti di ${formPlayer} nel reparto ${POSITION_NAMES[formRole]}, dal più vecchio al più recente`}
           >
-            {pe.map(({ m: e, p: t }, n) => (
+            {formGames.map(({ match, entry }, index) => (
               <div
-                key={e.matchId}
-                className={`lab-curve-game ${t ? '' : 'absent'}`}
+                key={match.matchId}
+                className={`lab-curve-game ${entry ? '' : 'absent'}`}
               >
-                <span>{t ? t.rating : '—'}</span>
+                <span>{entry ? entry.rating : '—'}</span>
                 <div className="lab-curve-track">
-                  {t && (
+                  {entry && (
                     <i
                       style={{
-                        height: `${Math.max(0, Math.min(100, j(t.rating) * 10))}%`,
+                        height: `${Math.max(0, Math.min(100, toNumber(entry.rating) * 10))}%`,
                       }}
                     />
                   )}
                 </div>
                 <b>
                   {'GARA '}
-                  {n + 1}
+                  {index + 1}
                 </b>
-                <small>{N(e)}</small>
+                <small>{getOpponentName(match)}</small>
                 <em>
-                  {t
-                    ? `${t.goals}G · ${t.assists}A`
-                    : ie(e).some((e) => e.playername === P)
+                  {entry
+                    ? `${entry.goals}G · ${entry.assists}A`
+                    : getClubPlayers(match).some(
+                          (player) => player.playername === formPlayer,
+                        )
                       ? 'Altro reparto'
                       : 'Non presente'}
                 </em>
@@ -492,61 +579,61 @@ function Tag_de({ matches: e }) {
           </div>
           <div className="lab-stat-grid">
             <div>
-              <strong>{F.goals}</strong>
+              <strong>{formSummary.goals}</strong>
               <span>GOL</span>
             </div>
             <div>
-              <strong>{F.assists}</strong>
+              <strong>{formSummary.assists}</strong>
               <span>ASSIST</span>
             </div>
             <div>
               <strong>
-                {se(F.pass)}
-                {F.pass === null ? '' : '%'}
+                {formatNumber(formSummary.pass)}
+                {formSummary.pass === null ? '' : '%'}
               </strong>
               <span>
                 {'PASSAGGI · '}
-                {F.passes}/{F.attempts}
+                {formSummary.passes}/{formSummary.attempts}
               </span>
             </div>
             <div>
-              <strong>{F.tackles}</strong>
+              <strong>{formSummary.tackles}</strong>
               <span>CONTRASTI RIUSCITI</span>
             </div>
           </div>
           <div className="lab-story">
             <span>IL PROSSIMO OBIETTIVO</span>
             <h3>
-              {F.games
-                ? F.attempts >= 10 && j(F.pass) < 75
+              {formSummary.games
+                ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < 75
                   ? 'Far arrivare un pallone in più.'
-                  : F.shots >= 5 && F.goals === 0
+                  : formSummary.shots >= 5 && formSummary.goals === 0
                     ? 'Trasformare il volume in gol.'
-                    : I !== null && I < 0
+                    : ratingDelta !== null && ratingDelta < 0
                       ? 'Riprendere il proprio ritmo.'
                       : 'Alzare il proprio riferimento.'
                 : 'Aspettiamo il campo.'}
             </h3>
             <p>
-              {F.games
-                ? F.attempts >= 10 && j(F.pass) < 75
-                  ? `${F.attempts - F.passes} passaggi non riusciti su ${F.attempts}. Prova a scegliere una soluzione semplice in più: il dato da seguire è la percentuale nel medesimo reparto.`
-                  : F.shots >= 5 && F.goals === 0
-                    ? `${F.shots} tiri senza gol nelle gare osservate. Il prossimo traguardo è il primo gol; dai dati non possiamo dedurre la qualità delle occasioni.`
-                    : `Il riferimento attuale è ${se(F.rating, 1)} di media EA in ${F.games} presenze. Prova a superarlo nella prossima gara nello stesso reparto, senza confonderlo con l’overall dell’avatar.`
+              {formSummary.games
+                ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < 75
+                  ? `${formSummary.attempts - formSummary.passes} passaggi non riusciti su ${formSummary.attempts}. Prova a scegliere una soluzione semplice in più: il dato da seguire è la percentuale nel medesimo reparto.`
+                  : formSummary.shots >= 5 && formSummary.goals === 0
+                    ? `${formSummary.shots} tiri senza gol nelle gare osservate. Il prossimo traguardo è il primo gol; dai dati non possiamo dedurre la qualità delle occasioni.`
+                    : `Il riferimento attuale è ${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze. Prova a superarlo nella prossima gara nello stesso reparto, senza confonderlo con l’overall dell’avatar.`
                 : 'Nessuna presenza consultabile.'}
             </p>
           </div>
           <p className="lab-note">
             {'Solo le ultime '}
-            {t.length}
+            {sortedMatches.length}
             {
               ' gare di campionato disponibili da EA. I reparti non vengono mescolati; EA distingue ATT, CEN, DIF e POR, non le singole posizioni come COC e CDC. Una gara in un altro reparto o un’assenza resta vuota, non vale zero. Il campione è breve: descrive queste gare, non tutta la stagione.'
             }
           </p>
         </div>
       )}
-      {n === 'duello' && (
+      {tab === 'duello' && (
         <div
           className="lab-panel"
           id="panel-duello"
@@ -556,32 +643,43 @@ function Tag_de({ matches: e }) {
           <div className="lab-toolbar">
             <label>
               Stesso reparto
-              <select value={_} onChange={(e) => y(e.target.value)}>
-                {Object.entries(M).map(([e, t]) => (
-                  <option key={e} value={e}>
-                    {t}
+              <select
+                value={duelRole}
+                onChange={(event) => setDuelRole(event.target.value)}
+              >
+                {Object.entries(POSITION_NAMES).map(([role, roleName]) => (
+                  <option key={role} value={role}>
+                    {roleName}
                   </option>
                 ))}
               </select>
             </label>
             <label>
               Pro A
-              <select value={G || ''} onChange={(e) => m(e.target.value)}>
-                {W.map((e) => (
-                  <option key={e}>{e}</option>
+              <select
+                value={duelPlayerA || ''}
+                onChange={(event) => setDuelChoiceA(event.target.value)}
+              >
+                {duelCandidates.map((duelCandidate) => (
+                  <option key={duelCandidate}>{duelCandidate}</option>
                 ))}
               </select>
             </label>
             <label>
               Pro B
-              <select value={K || ''} onChange={(e) => g(e.target.value)}>
-                {W.filter((e) => e !== G).map((e) => (
-                  <option key={e}>{e}</option>
-                ))}
+              <select
+                value={duelPlayerB || ''}
+                onChange={(event) => setDuelChoiceB(event.target.value)}
+              >
+                {duelCandidates
+                  .filter((duelCandidate) => duelCandidate !== duelPlayerA)
+                  .map((duelCandidate) => (
+                    <option key={duelCandidate}>{duelCandidate}</option>
+                  ))}
               </select>
             </label>
           </div>
-          {W.length < 2 ? (
+          {duelCandidates.length < 2 ? (
             <div className="lab-empty">
               <Swords size={32} />
               <h3>Il duello aspetta un avversario.</h3>
@@ -594,79 +692,98 @@ function Tag_de({ matches: e }) {
             <>
               <div className="lab-duel-names">
                 <div>
-                  <strong>{G}</strong>
+                  <strong>{duelPlayerA}</strong>
                   <small>
-                    {q.games}
+                    {duelSummaryA.games}
                     {' presenze · '}
-                    {M[_]}
+                    {POSITION_NAMES[duelRole]}
                   </small>
                 </div>
                 <span>VS</span>
                 <div>
-                  <strong>{K}</strong>
+                  <strong>{duelPlayerB}</strong>
                   <small>
-                    {J.games}
+                    {duelSummaryB.games}
                     {' presenze · '}
-                    {M[_]}
+                    {POSITION_NAMES[duelRole]}
                   </small>
                 </div>
               </div>
               <div className="lab-duel-metrics">
                 {[
-                  ['Voto medio EA', q.rating, J.rating, 1],
-                  ['Gol / presenza', q.goals / q.games, J.goals / J.games, 2],
+                  [
+                    'Voto medio EA',
+                    duelSummaryA.rating,
+                    duelSummaryB.rating,
+                    1,
+                  ],
+                  [
+                    'Gol / presenza',
+                    duelSummaryA.goals / duelSummaryA.games,
+                    duelSummaryB.goals / duelSummaryB.games,
+                    2,
+                  ],
                   [
                     'Assist / presenza',
-                    q.assists / q.games,
-                    J.assists / J.games,
+                    duelSummaryA.assists / duelSummaryA.games,
+                    duelSummaryB.assists / duelSummaryB.games,
                     2,
                   ],
-                  ['Passaggi riusciti %', q.pass, J.pass, 0],
+                  [
+                    'Passaggi riusciti %',
+                    duelSummaryA.pass,
+                    duelSummaryB.pass,
+                    0,
+                  ],
                   [
                     'Contrasti / presenza',
-                    q.tackles / q.games,
-                    J.tackles / J.games,
+                    duelSummaryA.tackles / duelSummaryA.games,
+                    duelSummaryB.tackles / duelSummaryB.games,
                     2,
                   ],
-                  ...(_ === 'goalkeeper'
+                  ...(duelRole === 'goalkeeper'
                     ? [
                         [
                           'Parate / presenza',
-                          q.saves / q.games,
-                          J.saves / J.games,
+                          duelSummaryA.saves / duelSummaryA.games,
+                          duelSummaryB.saves / duelSummaryB.games,
                           2,
                         ],
                       ]
                     : []),
-                ].map(([e, t, n, r]) => {
-                  let i = t,
-                    a = n,
-                    o = Math.max(0.01, j(i) + j(a));
+                ].map(([label, leftValue, rightValue, digits]) => {
+                  let left = leftValue,
+                    right = rightValue,
+                    total = Math.max(0.01, toNumber(left) + toNumber(right));
                   return (
-                    <div key={String(e)} className="lab-duel-row">
+                    <div key={String(label)} className="lab-duel-row">
                       <b
                         className={
-                          i !== null && a !== null && i > a ? 'ahead' : ''
+                          left !== null && right !== null && left > right
+                            ? 'ahead'
+                            : ''
                         }
                       >
-                        {se(i, Number(r))}
+                        {formatNumber(left, Number(digits))}
                       </b>
                       <div>
-                        <span>{String(e)}</span>
+                        <span>{String(label)}</span>
                         <div className="lab-duel-bar">
                           <i
                             style={{
-                              width: `${i === null || a === null ? 50 : (j(i) / o) * 100}%`,
+                              width: `${left === null || right === null ? 50 : (toNumber(left) / total) * 100}%`,
                             }}
                           />
                         </div>
                       </div>
                       <b
                         className={
-                          i !== null && a !== null && a > i ? 'ahead' : ''
+                          left !== null && right !== null && right > left
+                            ? 'ahead'
+                            : ''
                         }
                       >
-                        {se(a, Number(r))}
+                        {formatNumber(right, Number(digits))}
                       </b>
                     </div>
                   );
@@ -687,7 +804,7 @@ function Tag_de({ matches: e }) {
           )}
           <p className="lab-note">
             {'Confronto sulle ultime '}
-            {t.length}
+            {sortedMatches.length}
             {
               ' gare disponibili, solo nel reparto scelto. Le presenze possono appartenere a partite diverse. Percentuale passaggi calcolata sui tentativi totali; — significa nessun tentativo. Colore = valore più alto, non miglior giocatore in assoluto.'
             }
@@ -697,87 +814,88 @@ function Tag_de({ matches: e }) {
     </section>
   );
 }
-function Tag_fe() {
-  let e = useRef(null),
-    [t, n] = useState('loading'),
-    [i, a] = useState(false),
-    o = useRef(false);
+function AdaniMini() {
+  let canvasRef = useRef(null),
+    [status, setStatus] = useState('loading'),
+    [paused, setPaused] = useState(false),
+    pausedRef = useRef(false);
   useEffect(() => {
-    o.current = i;
-  }, [i]);
+    pausedRef.current = paused;
+  }, [paused]);
   useEffect(() => {
-    let t = e.current;
-    if (!t) return;
-    let i = false,
-      a = false,
-      s = false,
-      c,
-      l = new IntersectionObserver(async ([e]) => {
-        if (((s = e.isIntersecting), !(!s || a))) {
-          a = true;
+    let canvas = canvasRef.current;
+    if (!canvas) return;
+    let disposed = false,
+      started = false,
+      visible = false,
+      disposeScene,
+      observer = new IntersectionObserver(async ([entry]) => {
+        if (((visible = entry.isIntersecting), !(!visible || started))) {
+          started = true;
           try {
-            let { createAdaniScene: e } =
-              await import('./vendor/adani-scene.js');
-            if (i) return;
+            let { createAdaniScene } = await import('./vendor/adani-scene.js');
+            if (disposed) return;
             if (
-              ((c = await e(
-                t,
-                () => s && !o.current && !document.hidden,
-                () => i,
+              ((disposeScene = await createAdaniScene(
+                canvas,
+                () => visible && !pausedRef.current && !document.hidden,
+                () => disposed,
               )),
-              i)
+              disposed)
             ) {
-              c();
+              disposeScene();
               return;
             }
-            n('ready');
+            setStatus('ready');
           } catch {
-            i || n('unavailable');
+            disposed || setStatus('unavailable');
           }
         }
       });
-    l.observe(t);
+    observer.observe(canvas);
     return () => {
-      i = true;
-      l.disconnect();
-      c?.();
+      disposed = true;
+      observer.disconnect();
+      disposeScene?.();
     };
   }, []);
   return (
     <div className="adani-mini">
       <div
-        ref={e}
+        ref={canvasRef}
         className="adani-canvas"
         role="img"
         aria-label="Il modello 3D allegato, animato mentre scrive una pagella sul taccuino"
       />
-      {t === 'loading' && (
+      {status === 'loading' && (
         <span className="adani-loading">Apre il taccuino…</span>
       )}
-      {t === 'unavailable' && (
+      {status === 'unavailable' && (
         <span className="adani-loading">La pagella resta qui sotto.</span>
       )}
-      {t === 'ready' && (
+      {status === 'ready' && (
         <button
           className="adani-motion"
-          onClick={() => a(!i)}
-          aria-pressed={i}
-          aria-label={i ? 'Riprendi la scrittura 3D' : 'Ferma la scrittura 3D'}
+          onClick={() => setPaused(!paused)}
+          aria-pressed={paused}
+          aria-label={
+            paused ? 'Riprendi la scrittura 3D' : 'Ferma la scrittura 3D'
+          }
         >
-          {i ? 'Riprendi' : 'In redazione · pausa'}
+          {paused ? 'Riprendi' : 'In redazione · pausa'}
         </button>
       )}
     </div>
   );
 }
-const pe =
+const RAI_NEWS_URL =
   'https://www.rainews.it/articoli/2022/12/il-dio-del-calcio-si-chiama-messi-non-solo-per-gli-argentini-4adbf32b-7698-49a9-97f8-d51671071449.html';
-const me =
+const FANPAGE_URL =
   'https://www.fanpage.it/sport/calcio/adani-posseduto-in-telecronaca-messi-e-dentro-di-lui-e-gli-appare-maradona-cosa-abbiamo-visto/';
-const F = 'https://www.unshow.it/lele-adani-tormentoni';
-const he =
+const UNSHOW_URL = 'https://www.unshow.it/lele-adani-tormentoni';
+const REPUBBLICA_URL =
   'https://www.repubblica.it/sport/calcio/2022/11/26/news/adani_esultanza_messi_argentina-376333822/';
-const ge = [
+const ADANI_QUOTES = [
   {
     id: 'facciamo',
     text: 'Facciamo calcio',
@@ -806,7 +924,7 @@ const ge = [
   {
     id: 'cammelli',
     text: 'Dribbla tutti, anche i cammelli del deserto',
-    url: pe,
+    url: RAI_NEWS_URL,
     source: 'Rai News',
     context:
       'Messi in Argentina–Croazia, 13 dicembre 2022. Qui è una citazione, non una descrizione dei dribbling EA.',
@@ -815,7 +933,7 @@ const ge = [
   {
     id: 'impensato',
     text: 'La dinamica dell’impensato è il football',
-    url: pe,
+    url: RAI_NEWS_URL,
     source: 'Rai News',
     context:
       'Argentina–Croazia, 13 dicembre 2022: l’azione di Messi per il terzo gol.',
@@ -824,7 +942,7 @@ const ge = [
   {
     id: 'alzatevi',
     text: 'Alzatevi in piedi',
-    url: pe,
+    url: RAI_NEWS_URL,
     source: 'Rai News',
     context:
       'Argentina–Croazia, 13 dicembre 2022: l’esaltazione della giocata di Messi.',
@@ -833,7 +951,7 @@ const ge = [
   {
     id: 'palla',
     text: 'Ma che palla ha dato Messi?',
-    url: me,
+    url: FANPAGE_URL,
     source: 'Fanpage',
     context: 'Argentina–Paesi Bassi, 9 dicembre 2022: l’assist per Molina.',
     categories: ['assist'],
@@ -841,7 +959,7 @@ const ge = [
   {
     id: 'piugol',
     text: 'Questo vale più di un gol',
-    url: me,
+    url: FANPAGE_URL,
     source: 'Fanpage',
     context:
       'Argentina–Paesi Bassi, 9 dicembre 2022: il commento all’assist di Messi.',
@@ -850,7 +968,7 @@ const ge = [
   {
     id: 'viva',
     text: 'Viva el Fútbol',
-    url: me,
+    url: FANPAGE_URL,
     source: 'Fanpage',
     context:
       'Argentina–Paesi Bassi, 9 dicembre 2022: l’invito a celebrare il calcio.',
@@ -876,7 +994,7 @@ const ge = [
   {
     id: 'pranzo',
     text: 'In area di rigore c’è il pranzo al sacco!',
-    url: F,
+    url: UNSHOW_URL,
     source: 'UnShow',
     context:
       'Israele–Italia, settembre 2025: il finale pieno di gol e disattenzioni difensive.',
@@ -885,7 +1003,7 @@ const ge = [
   {
     id: 'analizza',
     text: 'Nessuno analizza il calcio più di me',
-    url: F,
+    url: UNSHOW_URL,
     source: 'UnShow',
     context:
       'La rivendicazione sulla Bobo TV, ricordata nella raccolta dei tormentoni.',
@@ -894,7 +1012,7 @@ const ge = [
   {
     id: 'effe',
     text: 'Il calcio con la Effe',
-    url: F,
+    url: UNSHOW_URL,
     source: 'UnShow',
     context: 'Uno dei tormentoni della Bobo TV.',
     categories: ['quality', 'welcome'],
@@ -918,7 +1036,7 @@ const ge = [
   {
     id: 'sinistro',
     text: 'Il sinistro migliore del Mondo!',
-    url: he,
+    url: REPUBBLICA_URL,
     source: 'Repubblica',
     context:
       'Messi in Argentina–Messico, 26 novembre 2022. Il piede dei Pro non è deducibile dai dati.',
@@ -927,85 +1045,91 @@ const ge = [
   {
     id: 'rispetto',
     text: 'Rispetto per il numero uno',
-    url: he,
+    url: REPUBBLICA_URL,
     source: 'Repubblica',
     context: 'Argentina–Messico, 26 novembre 2022: l’omaggio a Messi.',
     categories: ['quality', 'goal'],
   },
 ];
-const _e = (e) => [...e].reduce((e, t) => (e * 31 + t.charCodeAt(0)) >>> 0, 7);
-function I(e) {
-  return e.games
-    ? (e.rating !== null && e.rating < 6.5) ||
-      (e.passPct !== null && e.passPct !== undefined && e.passPct < 70)
+const hashString = (text) =>
+  [...text].reduce((total, char) => (total * 31 + char.charCodeAt(0)) >>> 0, 7);
+function classifyProfile(profile) {
+  return profile.games
+    ? (profile.rating !== null && profile.rating < 6.5) ||
+      (profile.passPct !== null &&
+        profile.passPct !== undefined &&
+        profile.passPct < 70)
       ? 'roast'
-      : e.assists > e.goals && e.assists
+      : profile.assists > profile.goals && profile.assists
         ? 'assist'
-        : e.goals >= e.games * 0.7
+        : profile.goals >= profile.games * 0.7
           ? 'goal'
-          : (e.tackles || 0) > e.goals + e.assists || (e.saves || 0) > 0
+          : (profile.tackles || 0) > profile.goals + profile.assists ||
+              (profile.saves || 0) > 0
             ? 'duel'
             : 'quality'
     : 'welcome';
 }
-function L(e, t) {
-  let n = new Set();
+function assignQuotes(players, salt) {
+  let usedIds = new Set();
   return new Map(
-    e.map((e) => {
-      let r = I(e),
-        i = [...ge].sort(
-          (n, i) =>
-            Number(i.categories.includes(r)) -
-              Number(n.categories.includes(r)) ||
-            _e(e.name + t + n.id) - _e(e.name + t + i.id),
+    players.map((player) => {
+      let category = classifyProfile(player),
+        ranked = [...ADANI_QUOTES].sort(
+          (a, b) =>
+            Number(b.categories.includes(category)) -
+              Number(a.categories.includes(category)) ||
+            hashString(player.name + salt + a.id) -
+              hashString(player.name + salt + b.id),
         ),
-        a = i.find((e) => !n.has(e.id)) || i[0];
-      n.add(a.id);
-      return [e.name, a];
+        quote =
+          ranked.find((candidate) => !usedIds.has(candidate.id)) || ranked[0];
+      usedIds.add(quote.id);
+      return [player.name, quote];
     }),
   );
 }
-function R(e) {
-  let t = (e) => Number(e) || 0;
+function toQuotePlayer(member) {
+  let count = (value) => Number(value) || 0;
   return {
-    name: e.name,
-    games: t(e.gamesPlayed),
-    goals: t(e.goals),
-    assists: t(e.assists),
-    rating: t(e.gamesPlayed) ? t(e.ratingAve) : null,
-    passPct: t(e.passSuccessRate),
-    tackles: t(e.tacklesMade),
+    name: member.name,
+    games: count(member.gamesPlayed),
+    goals: count(member.goals),
+    assists: count(member.assists),
+    rating: count(member.gamesPlayed) ? count(member.ratingAve) : null,
+    passPct: count(member.passSuccessRate),
+    tackles: count(member.tacklesMade),
   };
 }
-function Tag_ve({ player: e, quote: t }) {
-  let n = e.games
-    ? `${e.name}: ${e.goals} gol e ${e.assists} assist in ${e.games} presenze${e.rating === null ? '' : `, media EA ${e.rating.toFixed(2)}`}. ` +
-      (I(e) === 'assist'
+function AdaniComment({ player, quote }) {
+  let summary = player.games
+    ? `${player.name}: ${player.goals} gol e ${player.assists} assist in ${player.games} presenze${player.rating === null ? '' : `, media EA ${player.rating.toFixed(2)}`}. ` +
+      (classifyProfile(player) === 'assist'
         ? 'La redazione gli dedica l’Adani degli assist: le cifre raccontano il servizio ai compagni.'
-        : I(e) === 'goal'
+        : classifyProfile(player) === 'goal'
           ? 'La produzione offensiva dà il tono a questa citazione. La porta avversaria avrà un’opinione diversa.'
-          : I(e) === 'duel'
+          : classifyProfile(player) === 'duel'
             ? 'Lavoro e duelli entrano nel fascicolo: non tutto il contributo finisce nella colonna dei gol.'
-            : I(e) === 'roast'
+            : classifyProfile(player) === 'roast'
               ? 'Le cifre chiedono una risposta: la battuta punge, il prossimo tabellino può ribattere.'
               : 'Il rendimento ha materiale per il taccuino. Il prossimo capitolo si scrive in campo.')
     : 'Aspetta le prime presenze: il taccuino è aperto, la pagella deve ancora nascere.';
   return (
     <aside
       className="adani-comment"
-      aria-label={`Archivio Adani per ${e.name}`}
+      aria-label={`Archivio Adani per ${player.name}`}
     >
-      <Tag_fe />
+      <AdaniMini />
       <div>
         <span className="adani-kicker">LA VOCE DI ADANI · ARCHIVIO</span>
-        <blockquote>«{t.text}»</blockquote>
-        <p>{n}</p>
+        <blockquote>«{quote.text}»</blockquote>
+        <p>{summary}</p>
         <details>
           <summary>Citazione e fonte</summary>
           <p>
-            {t.context}{' '}
-            <a href={t.url} target="_blank" rel="noreferrer">
-              {t.source}
+            {quote.context}{' '}
+            <a href={quote.url} target="_blank" rel="noreferrer">
+              {quote.source}
             </a>
           </p>
           <small>
@@ -1017,27 +1141,27 @@ function Tag_ve({ player: e, quote: t }) {
     </aside>
   );
 }
-const z = (e) => Number(e || 0);
-const B = (e, t) => (z(e) / Math.max(1, t)).toFixed(2);
-function V(e, t, n) {
-  let r = z(e.gamesPlayed),
-    i = z(e.goals),
-    a = z(e.assists),
-    o = i + a,
-    s = z(e.ratingAve),
-    c = z(e.passesMade),
-    l = z(e.tacklesMade),
-    u = z(e.manOfTheMatch),
-    d = z(e.redCards),
-    f =
-      r >= 30
+const perGame = (value, games) =>
+  (toNumber(value) / Math.max(1, games)).toFixed(2);
+function buildSeasonProfile(member, members, recent) {
+  let games = toNumber(member.gamesPlayed),
+    goals = toNumber(member.goals),
+    assists = toNumber(member.assists),
+    contributions = goals + assists,
+    rating = toNumber(member.ratingAve),
+    passes = toNumber(member.passesMade),
+    tackles = toNumber(member.tacklesMade),
+    mvps = toNumber(member.manOfTheMatch),
+    reds = toNumber(member.redCards),
+    stage =
+      games >= 30
         ? 'Ritratto esteso'
-        : r >= 15
+        : games >= 15
           ? 'Profilo in profondità'
-          : r >= 5
+          : games >= 5
             ? 'La stagione prende forma'
             : 'Prime impressioni';
-  if (!r)
+  if (!games)
     return {
       stage: 'Profilo in attesa',
       title: 'La sua stagione deve ancora raccontarsi.',
@@ -1046,314 +1170,366 @@ function V(e, t, n) {
       sections: [],
       note: 'La descrizione si aggiorna insieme ai dati EA dopo le prime presenze.',
     };
-  let p =
-      o === 0
+  let title =
+      contributions === 0
         ? 'Il lavoro oltre il tabellino.'
-        : i > a * 2
+        : goals > assists * 2
           ? 'La stagione passa dai suoi gol.'
-          : a > i
+          : assists > goals
             ? 'Più assist che gol, finora.'
             : 'Gol e assist nello stesso repertorio.',
-    m = `${e.name} ha disputato ${r} gare: ${i} gol e ${a} assist, ${B(o, r)} contributi offensivi per presenza. Il voto medio EA è ${e.ratingAve}. ${r < 5 ? 'Sono i primi indizi: poche gare possono cambiare molto questa fotografia.' : r < 15 ? 'Il profilo comincia a delinearsi, ma il campione resta breve.' : r < 30 ? 'Il volume di presenze permette una lettura più articolata dei totali.' : 'Una stagione ormai ricca di presenze, da leggere anche oltre gol e assist.'}`,
-    h = [
+    intro = `${member.name} ha disputato ${games} gare: ${goals} gol e ${assists} assist, ${perGame(contributions, games)} contributi offensivi per presenza. Il voto medio EA è ${member.ratingAve}. ${games < 5 ? 'Sono i primi indizi: poche gare possono cambiare molto questa fotografia.' : games < 15 ? 'Il profilo comincia a delinearsi, ma il campione resta breve.' : games < 30 ? 'Il volume di presenze permette una lettura più articolata dei totali.' : 'Una stagione ormai ricca di presenze, da leggere anche oltre gol e assist.'}`,
+    sections = [
       {
         label: 'IL TABELLINO',
-        text: `${B(i, r)} gol e ${B(a, r)} assist a partita. ${o ? `${Math.round((i / o) * 100)}% dei suoi gol + assist sono reti segnate direttamente.` : 'Non ci sono ancora gol o assist registrati: questo, da solo, non giudica il lavoro difensivo.'} ${i >= a && i > 0 ? 'La voce più pesante della sua produzione è la finalizzazione.' : a > 0 ? 'Gli assist pesano più dei gol nella sua produzione offensiva.' : 'Il primo contributo offensivo resta un traguardo da seguire.'}`,
+        text: `${perGame(goals, games)} gol e ${perGame(assists, games)} assist a partita. ${contributions ? `${Math.round((goals / contributions) * 100)}% dei suoi gol + assist sono reti segnate direttamente.` : 'Non ci sono ancora gol o assist registrati: questo, da solo, non giudica il lavoro difensivo.'} ${goals >= assists && goals > 0 ? 'La voce più pesante della sua produzione è la finalizzazione.' : assists > 0 ? 'Gli assist pesano più dei gol nella sua produzione offensiva.' : 'Il primo contributo offensivo resta un traguardo da seguire.'}`,
       },
     ];
   if (
-    (r >= 5 &&
-      h.push({
+    (games >= 5 &&
+      sections.push({
         label: 'IL PALLONE TRA I PIEDI',
-        text: `${c} passaggi riusciti (${B(c, r)} per presenza), con ${e.passSuccessRate}% di successo secondo EA. ${c ? (z(e.passSuccessRate) >= 85 ? 'È la parte più ordinata della sua fotografia: conserva un’alta percentuale di passaggi riusciti.' : z(e.passSuccessRate) < 75 ? 'La precisione dei passaggi è una voce concreta da migliorare: il dato resta sotto il 75%.' : 'La percentuale offre un riferimento da provare a superare nelle prossime gare.') : 'Non ci sono passaggi riusciti da interpretare.'} ${r >= 15 ? `${l} contrasti riusciti (${B(l, r)} per gara). Il loro volume dipende anche dai ruoli giocati; non equivale da solo a qualità difensiva.` : ''}`,
+        text: `${passes} passaggi riusciti (${perGame(passes, games)} per presenza), con ${member.passSuccessRate}% di successo secondo EA. ${passes ? (toNumber(member.passSuccessRate) >= 85 ? 'È la parte più ordinata della sua fotografia: conserva un’alta percentuale di passaggi riusciti.' : toNumber(member.passSuccessRate) < 75 ? 'La precisione dei passaggi è una voce concreta da migliorare: il dato resta sotto il 75%.' : 'La percentuale offre un riferimento da provare a superare nelle prossime gare.') : 'Non ci sono passaggi riusciti da interpretare.'} ${games >= 15 ? `${tackles} contrasti riusciti (${perGame(tackles, games)} per gara). Il loro volume dipende anche dai ruoli giocati; non equivale da solo a qualità difensiva.` : ''}`,
       }),
-    r >= 15)
+    games >= 15)
   ) {
-    let n = t
-        .filter((t) => t.name !== e.name && z(t.gamesPlayed) >= 10)
-        .map((e) => z(e.ratingAve))
-        .sort((e, t) => e - t),
-      i = Math.floor(n.length / 2),
-      a = n.length ? (n.length % 2 ? n[i] : (n[i - 1] + n[i]) / 2) : null;
-    h.push({
+    let peerRatings = members
+        .filter(
+          (peer) =>
+            peer.name !== member.name && toNumber(peer.gamesPlayed) >= 10,
+        )
+        .map((peer) => toNumber(peer.ratingAve))
+        .sort((a, b) => a - b),
+      middle = Math.floor(peerRatings.length / 2),
+      median = peerRatings.length
+        ? peerRatings.length % 2
+          ? peerRatings[middle]
+          : (peerRatings[middle - 1] + peerRatings[middle]) / 2
+        : null;
+    sections.push({
       label: 'RENDIMENTO E RICONOSCIMENTI',
-      text: `Media EA ${e.ratingAve}; ${u} premi uomo partita in ${r} presenze. ${a !== null && n.length >= 3 ? `Il voto medio è ${s - a >= 0 ? '+' : ''}${(s - a).toFixed(1)} rispetto alla mediana degli altri ${n.length} Pro del club con almeno 10 gare. È un confronto fra tutti i ruoli, non una classifica per posizione.` : 'Il numero di premi e la media descrivono il rendimento complessivo; non provano che ogni gara sia stata costante.'} ${d ? `${d} espulsioni registrate: anche la disciplina entra nel bilancio.` : 'Nessuna espulsione registrata.'}`,
+      text: `Media EA ${member.ratingAve}; ${mvps} premi uomo partita in ${games} presenze. ${median !== null && peerRatings.length >= 3 ? `Il voto medio è ${rating - median >= 0 ? '+' : ''}${(rating - median).toFixed(1)} rispetto alla mediana degli altri ${peerRatings.length} Pro del club con almeno 10 gare. È un confronto fra tutti i ruoli, non una classifica per posizione.` : 'Il numero di premi e la media descrivono il rendimento complessivo; non provano che ogni gara sia stata costante.'} ${reds ? `${reds} espulsioni registrate: anche la disciplina entra nel bilancio.` : 'Nessuna espulsione registrata.'}`,
     });
   }
-  r >= 30 &&
-    h.push({
+  games >= 30 &&
+    sections.push({
       label: 'LA PROSSIMA PAGINA',
       text:
-        c && z(e.passSuccessRate) < 75
-          ? `Il bersaglio più leggibile è migliorare il ${e.passSuccessRate}% nei passaggi mantenendo il proprio volume di gioco. Gol e assist sono già ${o}: il prossimo aggiornamento mostrerà come cambiano i totali e le medie.`
-          : o
-            ? `Il riferimento offensivo è ${B(o, r)} gol + assist a presenza. Mantenerlo mentre crescono le gare è un obiettivo misurabile. ${u ? `I ${u} premi EA sono un secondo traguardo da incrementare.` : 'Il primo premio uomo partita EA resta da conquistare.'}`
-            : `Il prossimo contributo offensivo darà una nuova pagina al profilo. Per ora i ${l} contrasti e i ${c} passaggi riusciti sono il lavoro registrato oltre al tabellino.`,
+        passes && toNumber(member.passSuccessRate) < 75
+          ? `Il bersaglio più leggibile è migliorare il ${member.passSuccessRate}% nei passaggi mantenendo il proprio volume di gioco. Gol e assist sono già ${contributions}: il prossimo aggiornamento mostrerà come cambiano i totali e le medie.`
+          : contributions
+            ? `Il riferimento offensivo è ${perGame(contributions, games)} gol + assist a presenza. Mantenerlo mentre crescono le gare è un obiettivo misurabile. ${mvps ? `I ${mvps} premi EA sono un secondo traguardo da incrementare.` : 'Il primo premio uomo partita EA resta da conquistare.'}`
+            : `Il prossimo contributo offensivo darà una nuova pagina al profilo. Per ora i ${tackles} contrasti e i ${passes} passaggi riusciti sono il lavoro registrato oltre al tabellino.`,
     });
-  n.games &&
-    h.push({
-      label: `ZOOM RECENTE / ${n.label}`,
-      text: `Nelle ${n.games} presenze recenti in questo reparto: media EA ${n.rating.toFixed(1)}, ${n.goals} gol e ${n.assists} assist${n.passAttempts ? `, ${n.passPct}% nei passaggi` : ''}. Questa finestra è separata dai totali stagionali e può includere al massimo le cinque gare esposte da EA.`,
+  recent.games &&
+    sections.push({
+      label: `ZOOM RECENTE / ${recent.label}`,
+      text: `Nelle ${recent.games} presenze recenti in questo reparto: media EA ${recent.rating.toFixed(1)}, ${recent.goals} gol e ${recent.assists} assist${recent.passAttempts ? `, ${recent.passPct}% nei passaggi` : ''}. Questa finestra è separata dai totali stagionali e può includere al massimo le cinque gare esposte da EA.`,
     });
   return {
-    stage: f,
-    title: p,
-    intro: m,
-    sections: h,
+    stage,
+    title,
+    intro,
+    sections,
     note: 'Tutti i totali stagionali includono i ruoli giocati. Il profilo si ricalcola ad ogni lettura EA riuscita; la profondità aumenta a 5, 15 e 30 presenze. Non disponiamo dello storico completo delle singole gare: continuità, progressi mese per mese e statistiche stagionali per posizione non sono deducibili.',
   };
 }
-function H({ p: e, players: t, recent: n }) {
-  let r = V(e, t, n),
-    i = L(t.map(R), 'stagione').get(e.name);
+function SeasonProfile({ member, players, recent }) {
+  let profile = buildSeasonProfile(member, players, recent),
+    quote = assignQuotes(players.map(toQuotePlayer), 'stagione').get(
+      member.name,
+    );
   return (
     <section
       className="season-profile"
-      aria-label={`Ritratto stagionale di ${e.name}`}
+      aria-label={`Ritratto stagionale di ${member.name}`}
     >
       <div className="season-profile-heading">
         <span>IL ROMANZO DELLA STAGIONE</span>
         <b>
-          {r.stage}
+          {profile.stage}
           {' · '}
-          {e.gamesPlayed}
+          {member.gamesPlayed}
           {' presenze'}
         </b>
       </div>
-      <h4>{r.title}</h4>
-      <p>{r.intro}</p>
-      <Tag_ve player={R(e)} quote={i} />
-      {r.sections.map((e) => (
-        <div key={e.label} className="season-chapter">
-          <strong>{e.label}</strong>
-          <p>{e.text}</p>
+      <h4>{profile.title}</h4>
+      <p>{profile.intro}</p>
+      <AdaniComment player={toQuotePlayer(member)} quote={quote} />
+      {profile.sections.map((section) => (
+        <div key={section.label} className="season-chapter">
+          <strong>{section.label}</strong>
+          <p>{section.text}</p>
         </div>
       ))}
-      <p className="season-profile-note">{r.note}</p>
+      <p className="season-profile-note">{profile.note}</p>
     </section>
   );
 }
-const U = (e) => Number(e || 0);
-function ye(e) {
-  let t = new Intl.DateTimeFormat('en-CA', {
+function getRomeDate(timestamp) {
+  let parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Rome',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date(U(e) * 1e3));
+  }).formatToParts(new Date(toNumber(timestamp) * 1e3));
   return ['year', 'month', 'day']
-    .map((e) => t.find((t) => t.type === e)?.value)
+    .map((partType) => parts.find((part) => part.type === partType)?.value)
     .join('-');
 }
-function W(e) {
-  let t = new Date(U(e) * 1e3),
-    n = Number(
+function getSessionDay(timestamp) {
+  let date = new Date(toNumber(timestamp) * 1e3),
+    hour = Number(
       new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Europe/Rome',
         hour: '2-digit',
         hourCycle: 'h23',
-      }).format(t),
+      }).format(date),
     ),
-    r = ye(e);
-  if (n >= 6) return r;
-  let i = new Date(r + 'T12:00:00Z');
-  i.setUTCDate(i.getUTCDate() - 1);
-  return i.toISOString().slice(0, 10);
+    romeDate = getRomeDate(timestamp);
+  if (hour >= 6) return romeDate;
+  let previousDay = new Date(romeDate + 'T12:00:00Z');
+  previousDay.setUTCDate(previousDay.getUTCDate() - 1);
+  return previousDay.toISOString().slice(0, 10);
 }
-function G(e) {
-  let t = new Map(
-      e
-        .filter((e) => e.clubs?.['70375'] && e.matchId)
-        .map((e) => [String(e.matchId), e]),
+function groupByNight(matches) {
+  let matchesById = new Map(
+      matches
+        .filter((match) => match.clubs?.['70375'] && match.matchId)
+        .map((match) => [String(match.matchId), match]),
     ),
-    n = new Map();
-  for (let e of t.values()) {
-    let t = W(e.timestamp);
-    n.set(t, [...(n.get(t) || []), e]);
+    nights = new Map();
+  for (let match of matchesById.values()) {
+    let day = getSessionDay(match.timestamp);
+    nights.set(day, [...(nights.get(day) || []), match]);
   }
-  return [...n.entries()]
-    .sort(([e], [t]) => t.localeCompare(e))
-    .map(([e, t]) => ({
-      day: e,
-      games: t.sort((e, t) => U(e.timestamp) - U(t.timestamp)),
+  return [...nights.entries()]
+    .sort(([dayA], [dayB]) => dayB.localeCompare(dayA))
+    .map(([day, games]) => ({
+      day,
+      games: games.sort(
+        (a, b) => toNumber(a.timestamp) - toNumber(b.timestamp),
+      ),
     }));
 }
-function K(e) {
-  let t = new Map();
-  for (let n of e)
-    for (let [e, r] of Object.entries(n.players?.['70375'] || {})) {
-      if (!r) continue;
-      let n = t.get(e) || {
-        id: e,
-        name: r.playername,
+function summarizeNight(matches) {
+  let byPlayer = new Map();
+  for (let match of matches)
+    for (let [playerId, appearance] of Object.entries(
+      match.players?.['70375'] || {},
+    )) {
+      if (!appearance) continue;
+      let record = byPlayer.get(playerId) || {
+        id: playerId,
+        name: appearance.playername,
         appearances: [],
       };
-      n.name = r.playername;
-      n.appearances.push(r);
-      t.set(e, n);
+      record.name = appearance.playername;
+      record.appearances.push(appearance);
+      byPlayer.set(playerId, record);
     }
-  let n = [...t.values()]
-      .map((e) => {
-        let t = (t) => e.appearances.reduce((e, n) => e + U(n[t]), 0),
-          n = e.appearances.filter(
-            (e) => Number.isFinite(Number(e.rating)) && U(e.rating) > 0,
+  let players = [...byPlayer.values()]
+      .map((record) => {
+        let sumOf = (key) =>
+            record.appearances.reduce(
+              (total, appearance) => total + toNumber(appearance[key]),
+              0,
+            ),
+          ratedAppearances = record.appearances.filter(
+            (appearance) =>
+              Number.isFinite(Number(appearance.rating)) &&
+              toNumber(appearance.rating) > 0,
           ),
-          r = t('goals'),
-          i = t('assists'),
-          a = t('shots'),
-          o = t('passesmade'),
-          s = t('passattempts'),
-          c = t('tacklesmade'),
-          l = t('tackleattempts'),
-          u = t('saves'),
-          d = t('redcards'),
-          f = t('mom');
+          goals = sumOf('goals'),
+          assists = sumOf('assists'),
+          shots = sumOf('shots'),
+          passes = sumOf('passesmade'),
+          passAttempts = sumOf('passattempts'),
+          tackles = sumOf('tacklesmade'),
+          tackleAttempts = sumOf('tackleattempts'),
+          saves = sumOf('saves'),
+          reds = sumOf('redcards'),
+          mvps = sumOf('mom');
         return {
-          ...e,
-          games: e.appearances.length,
-          rating: n.length
-            ? n.reduce((e, t) => e + U(t.rating), 0) / n.length
+          ...record,
+          games: record.appearances.length,
+          rating: ratedAppearances.length
+            ? ratedAppearances.reduce(
+                (total, ratedAppearance) =>
+                  total + toNumber(ratedAppearance.rating),
+                0,
+              ) / ratedAppearances.length
             : null,
-          ratedGames: n.length,
-          goals: r,
-          assists: i,
-          shots: a,
-          passes: o,
-          passAttempts: s,
-          tackles: c,
-          tackleAttempts: l,
-          saves: u,
-          reds: d,
-          mvp: f,
-          roles: [...new Set(e.appearances.map((e) => e.pos))],
-          passPct: s ? Math.round((o / s) * 100) : null,
+          ratedGames: ratedAppearances.length,
+          goals,
+          assists,
+          shots,
+          passes,
+          passAttempts,
+          tackles,
+          tackleAttempts,
+          saves,
+          reds,
+          mvp: mvps,
+          roles: [
+            ...new Set(record.appearances.map((appearance) => appearance.pos)),
+          ],
+          passPct: passAttempts
+            ? Math.round((passes / passAttempts) * 100)
+            : null,
         };
       })
-      .sort((e, t) => e.name.localeCompare(t.name)),
-    r = Math.ceil(e.length / 2),
-    i = n.filter((e) => e.games >= r && e.ratedGames === e.games),
-    a = false;
-  if (!i.length) {
-    a = true;
-    let e = n.filter((e) => e.ratedGames === e.games && e.rating !== null),
-      t = Math.max(0, ...e.map((e) => e.games));
-    i = e.filter((e) => e.games === t);
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    required = Math.ceil(matches.length / 2),
+    qualified = players.filter(
+      (player) =>
+        player.games >= required && player.ratedGames === player.games,
+    ),
+    fallback = false;
+  if (!qualified.length) {
+    fallback = true;
+    let rated = players.filter(
+        (player) =>
+          player.ratedGames === player.games && player.rating !== null,
+      ),
+      maxGames = Math.max(0, ...rated.map((player) => player.games));
+    qualified = rated.filter((player) => player.games === maxGames);
   }
-  let o = Math.max(-1, ...i.map((e) => e.rating ?? -1)),
-    s = i.filter((e) => Math.abs((e.rating ?? -1) - o) < 1e-6),
-    c = e.map((e) => ({
-      m: e,
-      own: e.clubs[70375],
+  let bestRating = Math.max(
+      -1,
+      ...qualified.map((player) => player.rating ?? -1),
+    ),
+    winners = qualified.filter(
+      (player) => Math.abs((player.rating ?? -1) - bestRating) < 1e-6,
+    ),
+    results = matches.map((match) => ({
+      match,
+      own: match.clubs[70375],
     }));
   return {
-    players: n,
-    winners: s,
-    required: r,
-    fallback: a,
-    wins: c.filter((e) => U(e.own.goals) > U(e.own.goalsAgainst)).length,
-    draws: c.filter((e) => U(e.own.goals) === U(e.own.goalsAgainst)).length,
-    losses: c.filter((e) => U(e.own.goals) < U(e.own.goalsAgainst)).length,
-    goals: c.reduce((e, t) => e + U(t.own.goals), 0),
-    against: c.reduce((e, t) => e + U(t.own.goalsAgainst), 0),
+    players,
+    winners,
+    required,
+    fallback,
+    wins: results.filter(
+      (result) =>
+        toNumber(result.own.goals) > toNumber(result.own.goalsAgainst),
+    ).length,
+    draws: results.filter(
+      (result) =>
+        toNumber(result.own.goals) === toNumber(result.own.goalsAgainst),
+    ).length,
+    losses: results.filter(
+      (result) =>
+        toNumber(result.own.goals) < toNumber(result.own.goalsAgainst),
+    ).length,
+    goals: results.reduce(
+      (total, result) => total + toNumber(result.own.goals),
+      0,
+    ),
+    against: results.reduce(
+      (total, result) => total + toNumber(result.own.goalsAgainst),
+      0,
+    ),
   };
 }
-function q(e, t = 0) {
-  let n = (e) => e[t % e.length],
-    r = [],
-    i = [],
-    a = e.goals / Math.max(1, e.games),
-    o = e.assists / Math.max(1, e.games);
-  e.assists > e.goals &&
-    e.assists > 0 &&
-    r.push(
-      n([
-        `La rifinitura è il suo territorio: ${e.assists} assist in ${e.games} gare. Il suo ultimo passaggio ha prodotto gol, non soltanto possesso.`,
-        `Fa segnare gli altri: ${e.assists} assist. La sua qualità pesa soprattutto nella preparazione della conclusione; il contributo è quello di un rifinitore decisivo.`,
-        `${e.assists} assist: mette sostanza nel servizio ai compagni. La prestazione vive nel passaggio che precede il gol.`,
-        `L’impronta è nella rifinitura, con ${o.toFixed(2)} assist per gara. La giocata non finisce nei suoi piedi: diventa il gol di un compagno.`,
+function buildGradeComments(stats, variant = 0) {
+  let pick = (options) => options[variant % options.length],
+    praise = [],
+    criticism = [],
+    goalsPerGame = stats.goals / Math.max(1, stats.games),
+    assistsPerGame = stats.assists / Math.max(1, stats.games);
+  stats.assists > stats.goals &&
+    stats.assists > 0 &&
+    praise.push(
+      pick([
+        `La rifinitura è il suo territorio: ${stats.assists} assist in ${stats.games} gare. Il suo ultimo passaggio ha prodotto gol, non soltanto possesso.`,
+        `Fa segnare gli altri: ${stats.assists} assist. La sua qualità pesa soprattutto nella preparazione della conclusione; il contributo è quello di un rifinitore decisivo.`,
+        `${stats.assists} assist: mette sostanza nel servizio ai compagni. La prestazione vive nel passaggio che precede il gol.`,
+        `L’impronta è nella rifinitura, con ${assistsPerGame.toFixed(2)} assist per gara. La giocata non finisce nei suoi piedi: diventa il gol di un compagno.`,
       ]),
     );
-  e.goals &&
-    r.push(
-      n([
-        `${e.goals} gol: presenza concreta in finalizzazione${a >= 1 ? ', con almeno una rete per presenza di media' : ''}. Ha portato peso al tabellino.`,
-        `Davanti lascia il segno: ${e.goals} reti in ${e.games} presenze. La produzione offensiva ha un risultato concreto.`,
-        `Il contributo sotto porta è di ${e.goals} gol. Non soltanto partecipazione: conclusioni trasformate in reti.`,
-        `${a.toFixed(2)} gol per gara: la sua parte di attacco si misura nell’efficacia realizzativa.`,
+  stats.goals &&
+    praise.push(
+      pick([
+        `${stats.goals} gol: presenza concreta in finalizzazione${goalsPerGame >= 1 ? ', con almeno una rete per presenza di media' : ''}. Ha portato peso al tabellino.`,
+        `Davanti lascia il segno: ${stats.goals} reti in ${stats.games} presenze. La produzione offensiva ha un risultato concreto.`,
+        `Il contributo sotto porta è di ${stats.goals} gol. Non soltanto partecipazione: conclusioni trasformate in reti.`,
+        `${goalsPerGame.toFixed(2)} gol per gara: la sua parte di attacco si misura nell’efficacia realizzativa.`,
       ]),
     );
-  e.assists &&
-    e.assists <= e.goals &&
-    r.push(
-      `Ai gol affianca ${e.assists} assist: sa contribuire anche alla conclusione degli altri.`,
+  stats.assists &&
+    stats.assists <= stats.goals &&
+    praise.push(
+      `Ai gol affianca ${stats.assists} assist: sa contribuire anche alla conclusione degli altri.`,
     );
-  e.passPct !== null &&
-    e.passPct >= 85 &&
-    e.passAttempts >= 10 &&
-    r.push(
-      n([
-        `Pulizia nella distribuzione: ${e.passPct}% nei passaggi (${e.passes}/${e.passAttempts}). La trasmissione del pallone è una base affidabile.`,
-        `Precisione tecnica all’${e.passPct}% su ${e.passAttempts} passaggi: il dato premia l’esecuzione nella circolazione.`,
-        `${e.passes} passaggi riusciti e ${e.passPct}% di precisione: una prova ordinata con il pallone.`,
-        `Nel fraseggio mantiene un’alta precisione: ${e.passPct}% di passaggi riusciti. La qualità è nella continuità dell’esecuzione.`,
+  stats.passPct !== null &&
+    stats.passPct >= 85 &&
+    stats.passAttempts >= 10 &&
+    praise.push(
+      pick([
+        `Pulizia nella distribuzione: ${stats.passPct}% nei passaggi (${stats.passes}/${stats.passAttempts}). La trasmissione del pallone è una base affidabile.`,
+        `Precisione tecnica all’${stats.passPct}% su ${stats.passAttempts} passaggi: il dato premia l’esecuzione nella circolazione.`,
+        `${stats.passes} passaggi riusciti e ${stats.passPct}% di precisione: una prova ordinata con il pallone.`,
+        `Nel fraseggio mantiene un’alta precisione: ${stats.passPct}% di passaggi riusciti. La qualità è nella continuità dell’esecuzione.`,
       ]),
     );
-  e.tackles &&
-    r.length < 2 &&
-    r.push(
-      `${e.tackles} contrasti riusciti su ${e.tackleAttempts}: aggiunge sostanza nei duelli e nel recupero del pallone.`,
+  stats.tackles &&
+    praise.length < 2 &&
+    praise.push(
+      `${stats.tackles} contrasti riusciti su ${stats.tackleAttempts}: aggiunge sostanza nei duelli e nel recupero del pallone.`,
     );
-  e.saves &&
-    r.unshift(
-      `${e.saves} parate: la sua prestazione trova peso negli interventi a protezione della porta.`,
+  stats.saves &&
+    praise.unshift(
+      `${stats.saves} parate: la sua prestazione trova peso negli interventi a protezione della porta.`,
     );
-  r.length ||
-    r.push(
-      `${e.games} presenze, ${e.passes} passaggi riusciti e ${e.tackles} contrasti. Il lavoro registrato è soprattutto nella partecipazione alla manovra e nei duelli; manca un contributo diretto al gol.`,
+  praise.length ||
+    praise.push(
+      `${stats.games} presenze, ${stats.passes} passaggi riusciti e ${stats.tackles} contrasti. Il lavoro registrato è soprattutto nella partecipazione alla manovra e nei duelli; manca un contributo diretto al gol.`,
     );
-  let s = Math.max(0, e.passAttempts - e.passes),
-    c = Math.max(0, e.tackleAttempts - e.tackles);
-  e.reds &&
-    i.push(
-      `${e.reds} espulsioni: la disciplina rovina la prestazione. Il protagonismo va cercato col pallone, non con un appuntamento anticipato negli spogliatoi.`,
+  let missedPasses = Math.max(0, stats.passAttempts - stats.passes),
+    missedTackles = Math.max(0, stats.tackleAttempts - stats.tackles);
+  stats.reds &&
+    criticism.push(
+      `${stats.reds} espulsioni: la disciplina rovina la prestazione. Il protagonismo va cercato col pallone, non con un appuntamento anticipato negli spogliatoi.`,
     );
-  e.shots >= 3 &&
-    e.goals / e.shots < 0.3 &&
-    i.push(
-      n([
-        `${e.goals} gol su ${e.shots} tiri: manca efficacia in finalizzazione. L’attacco non vive di intenzioni: qui il portiere avversario ringrazia.`,
-        `La conversione è ${Math.round((e.goals / e.shots) * 100)}%: ${e.shots - e.goals} tiri senza rete. Tanto lavoro al tiro, poca ferocia sul tabellino.`,
-        `${e.shots} conclusioni per ${e.goals} gol: la produzione al tiro deve diventare più concreta. Le reti non si assegnano per partecipazione.`,
-        `Sotto porta lascia margine: ${e.goals}/${e.shots}. Il volume c’è, ma il colpo decisivo non arriva abbastanza spesso. Il pallone va in rete, non in terapia.`,
+  stats.shots >= 3 &&
+    stats.goals / stats.shots < 0.3 &&
+    criticism.push(
+      pick([
+        `${stats.goals} gol su ${stats.shots} tiri: manca efficacia in finalizzazione. L’attacco non vive di intenzioni: qui il portiere avversario ringrazia.`,
+        `La conversione è ${Math.round((stats.goals / stats.shots) * 100)}%: ${stats.shots - stats.goals} tiri senza rete. Tanto lavoro al tiro, poca ferocia sul tabellino.`,
+        `${stats.shots} conclusioni per ${stats.goals} gol: la produzione al tiro deve diventare più concreta. Le reti non si assegnano per partecipazione.`,
+        `Sotto porta lascia margine: ${stats.goals}/${stats.shots}. Il volume c’è, ma il colpo decisivo non arriva abbastanza spesso. Il pallone va in rete, non in terapia.`,
       ]),
     );
-  s &&
-    e.passPct !== null &&
-    e.passPct < 85 &&
-    i.push(
-      n([
-        `La trasmissione va ripulita: ${s} passaggi non riusciti, precisione ${e.passPct}%. Una squadra non può costruire soltanto sulle buone intenzioni: meno fretta, più qualità.`,
-        `${e.passPct}% nei passaggi: ${s} errori su ${e.passAttempts} tentativi. Il fraseggio chiede un’esecuzione migliore; il compagno non può ricevere una promessa.`,
-        `Con ${s} passaggi non riusciti, la pulizia tecnica è il punto da correggere. Qui il pallone scotta troppo: trattalo da alleato, non da patata bollente.`,
-        `Distribuzione al ${e.passPct}%: resta troppo margine nei passaggi. L’idea di gioco ha bisogno di piedi che la accompagnino, non che la sabotino.`,
-        `${s}/${e.passAttempts} passaggi non arrivano: serve precisione nell’esecuzione. Il possesso non è un regalo da distribuire all’avversario.`,
-        `Il ${e.passPct}% nei passaggi frena la qualità del fraseggio. ${s} tentativi non riusciti: prima di cercare il capolavoro, facciamo arrivare il pallone.`,
+  missedPasses &&
+    stats.passPct !== null &&
+    stats.passPct < 85 &&
+    criticism.push(
+      pick([
+        `La trasmissione va ripulita: ${missedPasses} passaggi non riusciti, precisione ${stats.passPct}%. Una squadra non può costruire soltanto sulle buone intenzioni: meno fretta, più qualità.`,
+        `${stats.passPct}% nei passaggi: ${missedPasses} errori su ${stats.passAttempts} tentativi. Il fraseggio chiede un’esecuzione migliore; il compagno non può ricevere una promessa.`,
+        `Con ${missedPasses} passaggi non riusciti, la pulizia tecnica è il punto da correggere. Qui il pallone scotta troppo: trattalo da alleato, non da patata bollente.`,
+        `Distribuzione al ${stats.passPct}%: resta troppo margine nei passaggi. L’idea di gioco ha bisogno di piedi che la accompagnino, non che la sabotino.`,
+        `${missedPasses}/${stats.passAttempts} passaggi non arrivano: serve precisione nell’esecuzione. Il possesso non è un regalo da distribuire all’avversario.`,
+        `Il ${stats.passPct}% nei passaggi frena la qualità del fraseggio. ${missedPasses} tentativi non riusciti: prima di cercare il capolavoro, facciamo arrivare il pallone.`,
       ]),
     );
-  c >= 3 &&
-    e.tackleAttempts &&
-    e.tackles / e.tackleAttempts < 0.5 &&
-    i.push(
-      n([
-        `Nei contrasti riesce in ${e.tackles} tentativi su ${e.tackleAttempts}: va alzata l’efficacia del duello. L’aggressività senza recupero fa rumore, non difesa.`,
-        `${c} contrasti non riusciti: il dato chiede più efficacia nell’intervento. Entrare nel duello è facile; uscirne col pallone sarebbe la parte interessante.`,
-        `Il bilancio dei duelli è ${e.tackles}/${e.tackleAttempts}. C’è da migliorare la riuscita del contrasto: la garra da sola non porta il pallone a casa.`,
-        `Troppi tentativi di contrasto senza recupero (${c}). La voglia di intervenire non basta: bisogna far pesare l’intervento.`,
+  missedTackles >= 3 &&
+    stats.tackleAttempts &&
+    stats.tackles / stats.tackleAttempts < 0.5 &&
+    criticism.push(
+      pick([
+        `Nei contrasti riesce in ${stats.tackles} tentativi su ${stats.tackleAttempts}: va alzata l’efficacia del duello. L’aggressività senza recupero fa rumore, non difesa.`,
+        `${missedTackles} contrasti non riusciti: il dato chiede più efficacia nell’intervento. Entrare nel duello è facile; uscirne col pallone sarebbe la parte interessante.`,
+        `Il bilancio dei duelli è ${stats.tackles}/${stats.tackleAttempts}. C’è da migliorare la riuscita del contrasto: la garra da sola non porta il pallone a casa.`,
+        `Troppi tentativi di contrasto senza recupero (${missedTackles}). La voglia di intervenire non basta: bisogna far pesare l’intervento.`,
       ]),
     );
-  i.length ||
-    i.push(
-      n([
+  criticism.length ||
+    criticism.push(
+      pick([
         'Non emerge un difetto netto nelle cifre della serata. Ora deve confermare questa pulizia: una bella pagella non è un abbonamento al posto da titolare.',
         'I numeri non isolano una criticità evidente. Il prossimo esame è ripetere la prova: lo spogliatoio applaude, ma non firma assegni in bianco.',
         'Nessuna sbavatura significativa da inchiodare al tabellino. Stavolta niente processo: la continuità, però, si dimostra nella prossima partita.',
@@ -1361,56 +1537,69 @@ function q(e, t = 0) {
       ]),
     );
   return {
-    positive: r.slice(0, 2).join(' '),
-    negative: i.slice(0, 2).join(' '),
+    positive: praise.slice(0, 2).join(' '),
+    negative: criticism.slice(0, 2).join(' '),
   };
 }
-const J = (e) => Number(e || 0);
-const Y = (e) => (e === null ? '—' : e.toFixed(2));
-function be(e, t) {
-  let n = [...new Map(t.map((e) => [e.matchId, e])).values()].sort(
-      (e, t) => t.timestamp - e.timestamp,
-    ),
-    r = n.slice(0, 15),
-    i = G(n)[0],
-    a = K(r).players,
-    o = K(i?.games || []).players,
-    s = [...new Set([...e.map((e) => e.name), ...a.map((e) => e.name)])];
+const formatRating = (value) => (value === null ? '—' : value.toFixed(2));
+function buildGradeRows(members, matches) {
+  let uniqueMatches = [
+      ...new Map(matches.map((match) => [match.matchId, match])).values(),
+    ].sort((a, b) => b.timestamp - a.timestamp),
+    recentMatches = uniqueMatches.slice(0, 15),
+    latestNight = groupByNight(uniqueMatches)[0],
+    recentPlayers = summarizeNight(recentMatches).players,
+    nightPlayers = summarizeNight(latestNight?.games || []).players,
+    names = [
+      ...new Set([
+        ...members.map((member) => member.name),
+        ...recentPlayers.map((player) => player.name),
+      ]),
+    ];
   return {
-    windowSize: r.length,
-    nightGames: i?.games.length || 0,
-    nightDate: i?.day,
-    rows: s
-      .map((t) => {
-        let n = e.find((e) => e.name.toLowerCase() === t.toLowerCase()),
-          r = a.find((e) => e.name.toLowerCase() === t.toLowerCase()),
-          i = o.find((e) => e.name.toLowerCase() === t.toLowerCase());
+    windowSize: recentMatches.length,
+    nightGames: latestNight?.games.length || 0,
+    nightDate: latestNight?.day,
+    rows: names
+      .map((name) => {
+        let seasonRow = members.find(
+            (member) => member.name.toLowerCase() === name.toLowerCase(),
+          ),
+          recentRow = recentPlayers.find(
+            (player) => player.name.toLowerCase() === name.toLowerCase(),
+          ),
+          eveningRow = nightPlayers.find(
+            (player) => player.name.toLowerCase() === name.toLowerCase(),
+          );
         return {
-          name: t,
+          name,
           season:
-            J(n?.gamesPlayed) > 0 && J(n?.ratingAve) > 0
-              ? J(n?.ratingAve)
+            toNumber(seasonRow?.gamesPlayed) > 0 &&
+            toNumber(seasonRow?.ratingAve) > 0
+              ? toNumber(seasonRow?.ratingAve)
               : null,
-          seasonGames: J(n?.gamesPlayed),
-          recent: r?.rating ?? null,
-          recentGames: r?.ratedGames || 0,
-          evening: i?.rating ?? null,
-          eveningGames: i?.ratedGames || 0,
-          session: i,
+          seasonGames: toNumber(seasonRow?.gamesPlayed),
+          recent: recentRow?.rating ?? null,
+          recentGames: recentRow?.ratedGames || 0,
+          evening: eveningRow?.rating ?? null,
+          eveningGames: eveningRow?.ratedGames || 0,
+          session: eveningRow,
         };
       })
-      .sort((e, t) => e.name.localeCompare(t.name)),
+      .sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
-function Tag_xe({ members: e, matches: t }) {
-  let [n, r] = useState('name'),
-    [i, a] = useState(null),
-    o = be(e, t),
-    s = [...o.rows].sort((e, t) =>
-      n === 'name' ? e.name.localeCompare(t.name) : (t[n] ?? -1) - (e[n] ?? -1),
+function PerformanceGrades({ members, matches }) {
+  let [sortKey, setSortKey] = useState('name'),
+    [openName, setOpenName] = useState(null),
+    grades = buildGradeRows(members, matches),
+    sortedRows = [...grades.rows].sort((a, b) =>
+      sortKey === 'name'
+        ? a.name.localeCompare(b.name)
+        : (b[sortKey] ?? -1) - (a[sortKey] ?? -1),
     ),
-    c = o.rows.find((e) => e.name === i),
-    l = o.rows.findIndex((e) => e.name === i);
+    openRow = grades.rows.find((row) => row.name === openName),
+    openIndex = grades.rows.findIndex((row) => row.name === openName);
   return (
     <section className="content performance-grades" id="voti">
       <div className="section-head">
@@ -1424,7 +1613,10 @@ function Tag_xe({ members: e, matches: t }) {
         </div>
         <label>
           Ordina per
-          <select value={n} onChange={(e) => r(e.target.value)}>
+          <select
+            value={sortKey}
+            onChange={(event) => setSortKey(event.target.value)}
+          >
             <option value="name">Nome</option>
             <option value="season">Stagione</option>
             <option value="evening">Ultima serata</option>
@@ -1443,58 +1635,62 @@ function Tag_xe({ members: e, matches: t }) {
               <th>
                 ULTIMA SERATA
                 <small>
-                  {o.nightDate
-                    ? new Date(o.nightDate + 'T12:00:00Z').toLocaleDateString(
-                        'it-IT',
-                        {
-                          day: 'numeric',
-                          month: 'short',
-                        },
-                      )
+                  {grades.nightDate
+                    ? new Date(
+                        grades.nightDate + 'T12:00:00Z',
+                      ).toLocaleDateString('it-IT', {
+                        day: 'numeric',
+                        month: 'short',
+                      })
                     : '—'}
                   {' · '}
-                  {o.nightGames}
+                  {grades.nightGames}
                   {' gare analizzate'}
                 </small>
               </th>
               <th>
-                ULTIME 15 GARE<small>{o.windowSize}/15 gare in archivio</small>
+                ULTIME 15 GARE
+                <small>{grades.windowSize}/15 gare in archivio</small>
               </th>
               <th>LETTURA</th>
             </tr>
           </thead>
           <tbody>
-            {s.map((e) => (
-              <tr key={e.name}>
-                <th scope="row">{e.name}</th>
+            {sortedRows.map((sortedRow) => (
+              <tr key={sortedRow.name}>
+                <th scope="row">{sortedRow.name}</th>
                 <td>
-                  <b>{Y(e.season)}</b>
+                  <b>{formatRating(sortedRow.season)}</b>
                   <small>
-                    {e.seasonGames}
+                    {sortedRow.seasonGames}
                     {' presenze stagionali'}
                   </small>
                 </td>
                 <td>
-                  <b>{Y(e.evening)}</b>
+                  <b>{formatRating(sortedRow.evening)}</b>
                   <small>
-                    {e.eveningGames}
+                    {sortedRow.eveningGames}
                     {' presenze con voto'}
                   </small>
                 </td>
                 <td>
-                  <b>{Y(e.recent)}</b>
+                  <b>{formatRating(sortedRow.recent)}</b>
                   <small>
-                    {e.recentGames}
+                    {sortedRow.recentGames}
                     {' presenze con voto'}
                   </small>
                 </td>
                 <td>
                   <button
-                    onClick={() => a(i === e.name ? null : e.name)}
-                    aria-expanded={i === e.name}
+                    onClick={() =>
+                      setOpenName(
+                        openName === sortedRow.name ? null : sortedRow.name,
+                      )
+                    }
+                    aria-expanded={openName === sortedRow.name}
                     aria-controls="grade-comment"
                   >
-                    {i === e.name ? 'Chiudi' : 'Commento'}
+                    {openName === sortedRow.name ? 'Chiudi' : 'Commento'}
                   </button>
                 </td>
               </tr>
@@ -1502,38 +1698,38 @@ function Tag_xe({ members: e, matches: t }) {
           </tbody>
         </table>
       </div>
-      {c && (
+      {openRow && (
         <div id="grade-comment" className="grade-selected">
           <span className="overline">
-            {c.name}
+            {openRow.name}
             {' / LETTURA DEL RENDIMENTO'}
           </span>
           <h3>
-            {c.evening !== null && c.season !== null
-              ? c.evening >= c.season + 0.3
+            {openRow.evening !== null && openRow.season !== null
+              ? openRow.evening >= openRow.season + 0.3
                 ? 'Una serata sopra il suo riferimento.'
-                : c.evening <= c.season - 0.3
+                : openRow.evening <= openRow.season - 0.3
                   ? 'Una prova sotto la sua media stagionale.'
                   : 'La serata segue il suo livello stagionale.'
               : 'Il rendimento prende forma.'}
           </h3>
           <p>
-            {c.season === null
+            {openRow.season === null
               ? ''
-              : `La stagione vale ${Y(c.season)} di media EA in ${c.seasonGames} presenze. `}
-            {c.evening === null
+              : `La stagione vale ${formatRating(openRow.season)} di media EA in ${openRow.seasonGames} presenze. `}
+            {openRow.evening === null
               ? 'Assente dalle gare dell’ultima serata in archivio. '
-              : `Nell’ultima serata la media è ${Y(c.evening)} in ${c.eveningGames} presenze. `}
-            {c.recent === null
+              : `Nell’ultima serata la media è ${formatRating(openRow.evening)} in ${openRow.eveningGames} presenze. `}
+            {openRow.recent === null
               ? ''
-              : `La finestra recente vale ${Y(c.recent)} in ${c.recentGames} presenze sulle ultime ${o.windowSize} gare del club.`}
+              : `La finestra recente vale ${formatRating(openRow.recent)} in ${openRow.recentGames} presenze sulle ultime ${grades.windowSize} gare del club.`}
           </p>
-          {c.session && (
+          {openRow.session && (
             <>
               <strong>IL CALCIO CHE HA PORTATO</strong>
-              <p>{q(c.session, l).positive}</p>
+              <p>{buildGradeComments(openRow.session, openIndex).positive}</p>
               <strong>DOVE SERVE QUALITÀ IN PIÙ</strong>
-              <p>{q(c.session, l).negative}</p>
+              <p>{buildGradeComments(openRow.session, openIndex).negative}</p>
             </>
           )}
         </div>
@@ -1553,127 +1749,135 @@ function Tag_xe({ members: e, matches: t }) {
     </section>
   );
 }
-const X = (e) => {
-  let t = Number(e);
-  return Number.isFinite(t) ? t : 0;
+const toFiniteNumber = (value) => {
+  let number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 };
-const Se = {
+const POSITION_ABBREVIATIONS = {
   forward: 'ATT',
   midfielder: 'CEN',
   defender: 'DIF',
   goalkeeper: 'POR',
 };
-const Ce = (e) => (e.length ? e.reduce((e, t) => e + t, 0) / e.length : null);
-const Z = (e) => (e === null ? '—' : e.toFixed(2));
-const we = (e) =>
-  new Date(e + 'T12:00:00Z').toLocaleDateString('it-IT', {
+const mean = (values) =>
+  values.length
+    ? values.reduce((total, value) => total + value, 0) / values.length
+    : null;
+const formatLongDate = (day) =>
+  new Date(day + 'T12:00:00Z').toLocaleDateString('it-IT', {
     timeZone: 'Europe/Rome',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-const Te = (e) =>
-  new Date(e.timestamp * 1e3).toLocaleTimeString('it-IT', {
+const formatMatchTime = (match) =>
+  new Date(match.timestamp * 1e3).toLocaleTimeString('it-IT', {
     timeZone: 'Europe/Rome',
     hour: '2-digit',
     minute: '2-digit',
   });
-const Ee = (e) =>
-  Object.entries(e.clubs).find(([e]) => e !== '70375')?.[1]?.details?.name ||
-  'Avversario';
-const Q = (e) => {
-  let t = e.clubs[70375];
-  return X(t.goals) > X(t.goalsAgainst)
+const getResultLetter = (match) => {
+  let own = match.clubs[70375];
+  return toFiniteNumber(own.goals) > toFiniteNumber(own.goalsAgainst)
     ? 'V'
-    : X(t.goals) < X(t.goalsAgainst)
+    : toFiniteNumber(own.goals) < toFiniteNumber(own.goalsAgainst)
       ? 'S'
       : 'P';
 };
-const De = (e) => `${e.clubs[70375]?.goals}–${e.clubs[70375]?.goalsAgainst}`;
-const Oe = (e) => [...e].reduce((e, t) => e + t.charCodeAt(0), 0);
-function ke(e, t, n, r = '') {
-  let i = t[0] || [...e].sort((e, t) => (t.rating ?? -1) - (e.rating ?? -1))[0];
-  if (!i)
+const formatScore = (match) =>
+  `${match.clubs[70375]?.goals}–${match.clubs[70375]?.goalsAgainst}`;
+const charCodeSum = (text) =>
+  [...text].reduce((total, char) => total + char.charCodeAt(0), 0);
+function buildCover(players, winners, clubGoals, day = '') {
+  let leader =
+    winners[0] ||
+    [...players].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1))[0];
+  if (!leader)
     return {
       name: 'BILLOCCHI CLUB',
       title: 'La prossima storia aspetta il fischio d’inizio.',
       deck: 'Le prime gare registrate apriranno la prima pagina del club.',
     };
-  let a = r ? Math.floor(Date.parse(r + 'T12:00:00Z') / 864e5) : 0,
-    o = (e, t = 0) =>
-      e[((Number.isFinite(a) ? a : 0) + Oe(i.name) + t) % e.length],
-    s = i.name,
-    c = `${i.goals} gol, ${i.assists} assist e media EA ${Z(i.rating)} in ${i.games} presenze.`,
-    l = {
+  let dayNumber = day ? Math.floor(Date.parse(day + 'T12:00:00Z') / 864e5) : 0,
+    pick = (options, offset = 0) =>
+      options[
+        ((Number.isFinite(dayNumber) ? dayNumber : 0) +
+          charCodeSum(leader.name) +
+          offset) %
+          options.length
+      ],
+    name = leader.name,
+    statLine = `${leader.goals} gol, ${leader.assists} assist e media EA ${formatRating(leader.rating)} in ${leader.games} presenze.`,
+    headlines = {
       assist: [
-        `${s} firma l’ultimo passaggio.`,
-        `${s}, la regia dei gol.`,
-        `${s} distribuisce occasioni, non alibi.`,
-        `${s}, il tabellino ringrazia.`,
-        `${s} mette gli assist in prima pagina.`,
-        `${s}, copyright sulla rifinitura.`,
-        `${s} fa segnare anche il titolo.`,
-        `${s}, il conto lo saldano gli assist.`,
-        `${s} manda i compagni in copertina.`,
-        `${s}, la firma dietro al gol.`,
-        `${s} prepara, il club incassa.`,
-        `${s}, gli assist fanno notizia.`,
+        `${name} firma l’ultimo passaggio.`,
+        `${name}, la regia dei gol.`,
+        `${name} distribuisce occasioni, non alibi.`,
+        `${name}, il tabellino ringrazia.`,
+        `${name} mette gli assist in prima pagina.`,
+        `${name}, copyright sulla rifinitura.`,
+        `${name} fa segnare anche il titolo.`,
+        `${name}, il conto lo saldano gli assist.`,
+        `${name} manda i compagni in copertina.`,
+        `${name}, la firma dietro al gol.`,
+        `${name} prepara, il club incassa.`,
+        `${name}, gli assist fanno notizia.`,
       ],
       goal: [
-        `${s} riscrive il tabellino.`,
-        `${s}, la porta è un appuntamento fisso.`,
-        `${s} lascia il segno, più volte.`,
-        `${s}, la rete ha il suo nome.`,
-        `${s} fa parlare i gol.`,
-        `${s}, prima pagina a suon di reti.`,
-        `${s} presenta il conto in area.`,
-        `${s}, la contabilità della rete.`,
-        `${s} colleziona firme sul risultato.`,
-        `${s}, gol da mettere agli atti.`,
-        `${s} cambia i numeri del club.`,
-        `${s}, la copertina passa dalla porta.`,
+        `${name} riscrive il tabellino.`,
+        `${name}, la porta è un appuntamento fisso.`,
+        `${name} lascia il segno, più volte.`,
+        `${name}, la rete ha il suo nome.`,
+        `${name} fa parlare i gol.`,
+        `${name}, prima pagina a suon di reti.`,
+        `${name} presenta il conto in area.`,
+        `${name}, la contabilità della rete.`,
+        `${name} colleziona firme sul risultato.`,
+        `${name}, gol da mettere agli atti.`,
+        `${name} cambia i numeri del club.`,
+        `${name}, la copertina passa dalla porta.`,
       ],
       save: [
-        `${s} difende la copertina.`,
-        `${s}, le parate fanno notizia.`,
-        `${s} risponde tra i pali.`,
-        `${s}, il presidio della porta.`,
-        `${s} mette le mani sul titolo.`,
-        `${s}, la rete trova un custode.`,
-        `${s} porta le parate in prima pagina.`,
-        `${s}, gli interventi lasciano traccia.`,
-        `${s} fa valere i guanti.`,
-        `${s}, una firma tra i pali.`,
-        `${s} chiama in causa il tabellino.`,
-        `${s}, la porta ha voce in redazione.`,
+        `${name} difende la copertina.`,
+        `${name}, le parate fanno notizia.`,
+        `${name} risponde tra i pali.`,
+        `${name}, il presidio della porta.`,
+        `${name} mette le mani sul titolo.`,
+        `${name}, la rete trova un custode.`,
+        `${name} porta le parate in prima pagina.`,
+        `${name}, gli interventi lasciano traccia.`,
+        `${name} fa valere i guanti.`,
+        `${name}, una firma tra i pali.`,
+        `${name} chiama in causa il tabellino.`,
+        `${name}, la porta ha voce in redazione.`,
       ],
       pass: [
-        `${s} tiene insieme il racconto.`,
-        `${s}, precisione da prima pagina.`,
-        `${s} dà ordine ai numeri.`,
-        `${s}, i passaggi trovano destinatario.`,
-        `${s} firma il fraseggio.`,
-        `${s}, la precisione lascia il segno.`,
-        `${s} tiene il filo della serata.`,
-        `${s}, il pallone arriva a destinazione.`,
-        `${s} convince col possesso.`,
-        `${s}, qualità nella distribuzione.`,
-        `${s} fa circolare la copertina.`,
-        `${s}, la manovra ha la sua firma.`,
+        `${name} tiene insieme il racconto.`,
+        `${name}, precisione da prima pagina.`,
+        `${name} dà ordine ai numeri.`,
+        `${name}, i passaggi trovano destinatario.`,
+        `${name} firma il fraseggio.`,
+        `${name}, la precisione lascia il segno.`,
+        `${name} tiene il filo della serata.`,
+        `${name}, il pallone arriva a destinazione.`,
+        `${name} convince col possesso.`,
+        `${name}, qualità nella distribuzione.`,
+        `${name} fa circolare la copertina.`,
+        `${name}, la manovra ha la sua firma.`,
       ],
       overall: [
-        `${s} si prende il titolo.`,
-        `${s}, una serata da raccontare.`,
-        `${s} lascia la firma sulla notte.`,
-        `${s}, i voti lo portano in copertina.`,
-        `${s} sale sul tavolo della redazione.`,
-        `${s}, la prova che vale la prima pagina.`,
-        `${s} chiude la serata in evidenza.`,
-        `${s}, il tabellino sostiene l’applauso.`,
-        `${s} conquista la cronaca del club.`,
-        `${s}, una firma sopra la media.`,
-        `${s} guida questa edizione.`,
-        `${s}, il rendimento diventa notizia.`,
+        `${name} si prende il titolo.`,
+        `${name}, una serata da raccontare.`,
+        `${name} lascia la firma sulla notte.`,
+        `${name}, i voti lo portano in copertina.`,
+        `${name} sale sul tavolo della redazione.`,
+        `${name}, la prova che vale la prima pagina.`,
+        `${name} chiude la serata in evidenza.`,
+        `${name}, il tabellino sostiene l’applauso.`,
+        `${name} conquista la cronaca del club.`,
+        `${name}, una firma sopra la media.`,
+        `${name} guida questa edizione.`,
+        `${name}, il rendimento diventa notizia.`,
       ],
       shared: [
         'La prima pagina si divide.',
@@ -1690,13 +1894,13 @@ function ke(e, t, n, r = '') {
         'Il verdetto lascia il titolo condiviso.',
       ],
     };
-  if (t.length > 1)
+  if (winners.length > 1)
     return {
-      name: t.map((e) => e.name).join(' + '),
-      title: o(l.shared),
+      name: winners.map((winner) => winner.name).join(' + '),
+      title: pick(headlines.shared),
       deck:
-        `${t.map((e) => e.name).join(' e ')} condividono il riconoscimento: media EA ${Z(i.rating)}. ` +
-        o(
+        `${winners.map((winner) => winner.name).join(' e ')} condividono il riconoscimento: media EA ${formatRating(leader.rating)}. ` +
+        pick(
           [
             'Il pari merito è nei numeri.',
             'La redazione assegna una copertina condivisa.',
@@ -1706,30 +1910,30 @@ function ke(e, t, n, r = '') {
           3,
         ),
     };
-  let u =
-      i.assists >= 3 && i.assists > i.goals
+  let category =
+      leader.assists >= 3 && leader.assists > leader.goals
         ? 'assist'
-        : i.goals >= 3
+        : leader.goals >= 3
           ? 'goal'
-          : i.saves >= 3
+          : leader.saves >= 3
             ? 'save'
-            : i.passPct !== null && i.passPct >= 85
+            : leader.passPct !== null && leader.passPct >= 85
               ? 'pass'
               : 'overall',
-    d =
-      u === 'save'
-        ? ` ${i.saves} parate registrate.`
-        : u === 'pass'
-          ? ` ${i.passPct}% di passaggi riusciti.`
+    extra =
+      category === 'save'
+        ? ` ${leader.saves} parate registrate.`
+        : category === 'pass'
+          ? ` ${leader.passPct}% di passaggi riusciti.`
           : '';
   return {
-    name: s,
-    title: o(l[u]),
+    name,
+    title: pick(headlines[category]),
     deck:
-      c +
-      d +
+      statLine +
+      extra +
       ' ' +
-      o(
+      pick(
         [
           'Le cifre sostengono la copertina di questa edizione.',
           'La redazione parte dai numeri, poi si prende la libertà dell’applauso.',
@@ -1742,92 +1946,105 @@ function ke(e, t, n, r = '') {
       ),
   };
 }
-function Ae(e) {
-  let t = [...e].sort((e, t) => e.timestamp - t.timestamp),
-    n = [],
-    r = t
-      .filter((e) => Q(e) === 'V')
-      .sort((e, t) => {
-        let n = e.clubs[70375],
-          r = t.clubs[70375];
+function buildTurningPoints(games) {
+  let sorted = [...games].sort((a, b) => a.timestamp - b.timestamp),
+    points = [],
+    wins = sorted
+      .filter((game) => getResultLetter(game) === 'V')
+      .sort((first, second) => {
+        let firstOwn = first.clubs[70375],
+          secondOwn = second.clubs[70375];
         return (
-          X(r.goals) - X(r.goalsAgainst) - (X(n.goals) - X(n.goalsAgainst))
+          toFiniteNumber(secondOwn.goals) -
+          toFiniteNumber(secondOwn.goalsAgainst) -
+          (toFiniteNumber(firstOwn.goals) -
+            toFiniteNumber(firstOwn.goalsAgainst))
         );
       });
-  r[0] &&
-    n.push({
+  wins[0] &&
+    points.push({
       tag: 'LA VITTORIA PIÙ LARGA',
-      title: `${De(r[0])}. Il tabellino parla forte.`,
-      text: `Contro ${Ee(r[0])}, alle ${Te(r[0])}: il margine più ampio tra le vittorie di questa edizione.`,
-      games: [r[0]],
+      title: `${formatScore(wins[0])}. Il tabellino parla forte.`,
+      text: `Contro ${getOpponentName(wins[0])}, alle ${formatMatchTime(wins[0])}: il margine più ampio tra le vittorie di questa edizione.`,
+      games: [wins[0]],
     });
-  let i = t.find((e, n) => n > 0 && Q(e) === 'V' && Q(t[n - 1]) === 'S');
-  if (i) {
-    let e = t.indexOf(i);
-    n.push({
+  let reaction = sorted.find(
+    (game, index) =>
+      index > 0 &&
+      getResultLetter(game) === 'V' &&
+      getResultLetter(sorted[index - 1]) === 'S',
+  );
+  if (reaction) {
+    let index = sorted.indexOf(reaction);
+    points.push({
       tag: 'LA RISPOSTA',
       title: 'Una sconfitta, poi la replica.',
-      text: `Dopo il ${De(t[e - 1])} contro ${Ee(t[e - 1])}, arriva il ${De(i)} contro ${Ee(i)}. La partita successiva rimette una vittoria nel bilancio.`,
-      games: [t[e - 1], i],
+      text: `Dopo il ${formatScore(sorted[index - 1])} contro ${getOpponentName(sorted[index - 1])}, arriva il ${formatScore(reaction)} contro ${getOpponentName(reaction)}. La partita successiva rimette una vittoria nel bilancio.`,
+      games: [sorted[index - 1], reaction],
     });
   }
-  let a = [],
-    o = [];
-  for (let e of t)
-    Q(e) === 'S' ? (a = []) : (a.push(e), a.length > o.length && (o = [...a]));
-  o.length >= 3 &&
-    n.push({
+  let currentRun = [],
+    bestRun = [];
+  for (let game of sorted)
+    getResultLetter(game) === 'S'
+      ? (currentRun = [])
+      : (currentRun.push(game),
+        currentRun.length > bestRun.length && (bestRun = [...currentRun]));
+  bestRun.length >= 3 &&
+    points.push({
       tag: 'LA SERIE POSITIVA',
-      title: `${o.length} gare senza cedere.`,
-      text: `${o.filter((e) => Q(e) === 'V').length} vittorie e ${o.filter((e) => Q(e) === 'P').length} pareggi consecutivi nelle partite registrate della serata.`,
-      games: o,
+      title: `${bestRun.length} gare senza cedere.`,
+      text: `${bestRun.filter((game) => getResultLetter(game) === 'V').length} vittorie e ${bestRun.filter((game) => getResultLetter(game) === 'P').length} pareggi consecutivi nelle partite registrate della serata.`,
+      games: bestRun,
     });
-  let s = t
+  let closest = sorted
     .filter(
-      (e) =>
-        Math.abs(X(e.clubs[70375]?.goals) - X(e.clubs[70375]?.goalsAgainst)) <=
-        1,
+      (game) =>
+        Math.abs(
+          toFiniteNumber(game.clubs[70375]?.goals) -
+            toFiniteNumber(game.clubs[70375]?.goalsAgainst),
+        ) <= 1,
     )
     .sort(
-      (e, t) =>
-        X(t.clubs[70375]?.goals) +
-        X(t.clubs[70375]?.goalsAgainst) -
-        X(e.clubs[70375]?.goals) -
-        X(e.clubs[70375]?.goalsAgainst),
+      (a, b) =>
+        toFiniteNumber(b.clubs[70375]?.goals) +
+        toFiniteNumber(b.clubs[70375]?.goalsAgainst) -
+        toFiniteNumber(a.clubs[70375]?.goals) -
+        toFiniteNumber(a.clubs[70375]?.goalsAgainst),
     )[0];
-  s &&
-    n.push({
+  closest &&
+    points.push({
       tag: 'IL RISULTATO IN BILICO',
-      title: `${De(s)}. Margine minimo.`,
-      text: `${Ee(s)}, alle ${Te(s)}: ${Q(s) === 'P' ? 'un pareggio' : 'una gara chiusa con un solo gol di scarto'}. Il risultato finale racconta quanto fossero vicine le squadre.`,
-      games: [s],
+      title: `${formatScore(closest)}. Margine minimo.`,
+      text: `${getOpponentName(closest)}, alle ${formatMatchTime(closest)}: ${getResultLetter(closest) === 'P' ? 'un pareggio' : 'una gara chiusa con un solo gol di scarto'}. Il risultato finale racconta quanto fossero vicine le squadre.`,
+      games: [closest],
     });
-  !n.length &&
-    t[0] &&
-    n.push({
+  !points.length &&
+    sorted[0] &&
+    points.push({
       tag: 'IL BILANCIO',
       title: 'Una notte da cui ripartire.',
-      text: `${t.length} gare registrate. Apri i tabellini per vedere dove è finito il contributo di ciascun Pro.`,
-      games: t,
+      text: `${sorted.length} gare registrate. Apri i tabellini per vedere dove è finito il contributo di ciascun Pro.`,
+      games: sorted,
     });
-  return n.slice(0, 3);
+  return points.slice(0, 3);
 }
-function je(e, t, n = Oe(e.name + t)) {
-  let r = q(e, n),
-    i = e.goals / Math.max(1, e.games),
-    a = Math.max(0, e.passAttempts - e.passes),
-    o = Math.max(0, e.tackleAttempts - e.tackles),
-    s,
-    c,
-    l,
-    u = (e) => e[n % e.length];
-  e.reds
-    ? ((s = `${e.reds} rossi. Ha prenotato la doccia prima degli altri.`),
-      (c = `${e.reds} espulsioni in ${e.games} presenze.`),
-      (l =
+function buildTrial(player, salt, seed = charCodeSum(player.name + salt)) {
+  let comments = buildGradeComments(player, seed),
+    goalsPerGame = player.goals / Math.max(1, player.games),
+    missedPasses = Math.max(0, player.passAttempts - player.passes),
+    missedTackles = Math.max(0, player.tackleAttempts - player.tackles),
+    charge,
+    proof,
+    verdict,
+    pick = (options) => options[seed % options.length];
+  player.reds
+    ? ((charge = `${player.reds} rossi. Ha prenotato la doccia prima degli altri.`),
+      (proof = `${player.reds} espulsioni in ${player.games} presenze.`),
+      (verdict =
         'La qualità va lasciata in campo. Il prossimo colpo di genio può risparmiarsi il cartellino.'))
-    : e.shots >= 3 && e.goals / e.shots < 0.3
-      ? ((s = u([
+    : player.shots >= 3 && player.goals / player.shots < 0.3
+      ? ((charge = pick([
           'Il portiere avversario sta valutando di mandargli un biglietto di ringraziamento.',
           'Tanta produzione al tiro. Il tabellino, però, non accetta preventivi.',
           'La porta è un obiettivo, non un suggerimento geografico.',
@@ -1835,13 +2052,15 @@ function je(e, t, n = Oe(e.name + t)) {
           'Le conclusioni ci sono. Il killer instinct ha chiesto un permesso retribuito.',
           'Il tabellino non assegna gol per entusiasmo: serve il colpo che chiude il discorso.',
         ])),
-        (c = `${e.goals} gol su ${e.shots} tiri: conversione ${Math.round((e.goals / e.shots) * 100)}%. Non distingue tiri fuori, parati o bloccati.`),
-        (l =
-          e.assists >= 2
-            ? `La rifinitura lo difende (${e.assists} assist). La finalizzazione resta il prossimo esame.`
+        (proof = `${player.goals} gol su ${player.shots} tiri: conversione ${Math.round((player.goals / player.shots) * 100)}%. Non distingue tiri fuori, parati o bloccati.`),
+        (verdict =
+          player.assists >= 2
+            ? `La rifinitura lo difende (${player.assists} assist). La finalizzazione resta il prossimo esame.`
             : 'Il volume è agli atti. Ora servono più reti per ogni tentativo.'))
-      : e.passAttempts >= 10 && e.passPct !== null && e.passPct < 85
-        ? ((s = u([
+      : player.passAttempts >= 10 &&
+          player.passPct !== null &&
+          player.passPct < 85
+        ? ((charge = pick([
             'Il compagno chiede un pallone, non una promessa elettorale.',
             'Il possesso non è una raccolta fondi per gli avversari.',
             'La visione di gioco c’è. Ogni tanto i piedi leggono un altro copione.',
@@ -1849,22 +2068,23 @@ function je(e, t, n = Oe(e.name + t)) {
             'Nel fraseggio serve meno improvvisazione: il compagno non è un investigatore privato.',
             'Il pallone non scotta. Si può tenere abbastanza a lungo da passarlo bene.',
           ])),
-          (c = `${a} passaggi non riusciti su ${e.passAttempts}; precisione ${e.passPct}%.`),
-          (l =
-            e.goals + e.assists
-              ? `I ${e.goals + e.assists} gol + assist gli danno argomenti. La precisione deve raggiungere l’ambizione.`
+          (proof = `${missedPasses} passaggi non riusciti su ${player.passAttempts}; precisione ${player.passPct}%.`),
+          (verdict =
+            player.goals + player.assists
+              ? `I ${player.goals + player.assists} gol + assist gli danno argomenti. La precisione deve raggiungere l’ambizione.`
               : 'La partecipazione alla manovra è registrata. L’esecuzione va ripulita.'))
-        : e.tackleAttempts >= 4 && e.tackles / e.tackleAttempts < 0.5
-          ? ((s = u([
+        : player.tackleAttempts >= 4 &&
+            player.tackles / player.tackleAttempts < 0.5
+          ? ((charge = pick([
               'La garra si sente. Il recupero del pallone, un po’ meno.',
               'Ha presentato domanda per ogni duello. Troppi colloqui senza assunzione.',
               'L’aggressività fa rumore; il pallone si riprende con un intervento riuscito.',
               'Entrare nel contrasto è il primo capitolo. Uscirne col pallone sarebbe il finale preferito.',
             ])),
-            (c = `${e.tackles} contrasti riusciti su ${e.tackleAttempts}; ${o} tentativi non riusciti.`),
-            (l =
+            (proof = `${player.tackles} contrasti riusciti su ${player.tackleAttempts}; ${missedTackles} tentativi non riusciti.`),
+            (verdict =
               'La voglia di intervenire è agli atti. Il duello deve diventare più efficace, oltre che più rumoroso.'))
-          : ((s = u([
+          : ((charge = pick([
               'L’accusa non trova un difetto netto. Non è il momento di farsi costruire una statua.',
               'Le cifre lo difendono. Il contratto da fenomeno resta da rinnovare alla prossima gara.',
               'Per questa volta il tribunale resta senza munizioni. Il parcheggio dello stadio conserva il vecchio nome.',
@@ -1872,130 +2092,154 @@ function je(e, t, n = Oe(e.name + t)) {
               'Il tabellino non offre un bersaglio serio. Si prenda l’applauso, senza ordinare il busto in marmo.',
               'Oggi niente condanna statistica. Il posto nell’Olimpo si conferma col prossimo pallone.',
             ])),
-            (c = `Media EA ${Z(e.rating)}, ${e.games} presenze, ${e.goals} gol e ${e.assists} assist.`),
-            (l =
+            (proof = `Media EA ${formatRating(player.rating)}, ${player.games} presenze, ${player.goals} gol e ${player.assists} assist.`),
+            (verdict =
               'Assolto sulle cifre di questa serata. La continuità si dimostra nelle prossime presenze.'));
   return {
-    title: e.saves
+    title: player.saves
       ? 'Il custode del risultato.'
-      : e.assists > e.goals && e.assists
+      : player.assists > player.goals && player.assists
         ? 'Il servizio ai compagni.'
-        : i >= 1
+        : goalsPerGame >= 1
           ? 'Il tabellino lo conosce.'
-          : e.goals
+          : player.goals
             ? 'La firma davanti.'
-            : e.tackles
+            : player.tackles
               ? 'Il lavoro nei duelli.'
               : 'La manovra passa anche qui.',
-    praise: r.positive,
-    charge: s,
-    proof: c,
-    verdict: l,
+    praise: comments.positive,
+    charge,
+    proof,
+    verdict,
   };
 }
-function Me(e, t) {
-  let n = new Set();
-  return e.map((e) => {
-    let r = je(e, t),
-      i = 0;
-    for (; n.has(r.charge) && i < 12; ) {
-      i++;
-      r = je(e, t, Oe(e.name + t) + i);
+function buildTrials(players, salt) {
+  let usedCharges = new Set();
+  return players.map((player) => {
+    let trial = buildTrial(player, salt),
+      attempt = 0;
+    for (; usedCharges.has(trial.charge) && attempt < 12; ) {
+      attempt++;
+      trial = buildTrial(
+        player,
+        salt,
+        charCodeSum(player.name + salt) + attempt,
+      );
     }
-    n.has(r.charge) &&
-      (r = {
-        ...r,
-        charge: `Il fascicolo di ${e.name}: ${r.proof} La prossima partita può migliorare la risposta; per ora la statua resta in magazzino.`,
+    usedCharges.has(trial.charge) &&
+      (trial = {
+        ...trial,
+        charge: `Il fascicolo di ${player.name}: ${trial.proof} La prossima partita può migliorare la risposta; per ora la statua resta in magazzino.`,
       });
-    n.add(r.charge);
+    usedCharges.add(trial.charge);
     return {
-      player: e,
-      trial: r,
+      player,
+      trial,
     };
   });
 }
-function Ne(e, t) {
-  let n = [
+function buildRoleTrend(playerName, matches) {
+  let appearances = [
       ...new Map(
-        t.filter((e) => e.clubs?.['70375']).map((e) => [String(e.matchId), e]),
+        matches
+          .filter((match) => match.clubs?.['70375'])
+          .map((match) => [String(match.matchId), match]),
       ).values(),
     ]
-      .sort((e, t) => e.timestamp - t.timestamp)
-      .flatMap((t) =>
-        Object.values(t.players?.['70375'] || {})
-          .filter((t) => t && t.playername.toLowerCase() === e.toLowerCase())
-          .map((e) => ({
-            p: e,
-            m: t,
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .flatMap((match) =>
+        Object.values(match.players?.['70375'] || {})
+          .filter(
+            (player) =>
+              player &&
+              player.playername.toLowerCase() === playerName.toLowerCase(),
+          )
+          .map((appearance) => ({
+            appearance,
+            match,
           })),
       ),
-    r = n.at(-1)?.p.pos,
-    i = n
-      .filter((e) => e.p.pos === r)
+    role = appearances.at(-1)?.appearance.pos,
+    points = appearances
+      .filter((entry) => entry.appearance.pos === role)
       .slice(-12)
-      .filter((e) => X(e.p.rating) > 0)
-      .map((e) => ({
-        rating: X(e.p.rating),
-        date: e.m.timestamp,
-        matchId: e.m.matchId,
+      .filter((entry) => toFiniteNumber(entry.appearance.rating) > 0)
+      .map((entry) => ({
+        rating: toFiniteNumber(entry.appearance.rating),
+        date: entry.match.timestamp,
+        matchId: entry.match.matchId,
       }));
-  if (i.length < 4)
+  if (points.length < 4)
     return {
-      role: Se[r || ''] || '—',
-      points: i,
+      role: POSITION_ABBREVIATIONS[role || ''] || '—',
+      points,
       previous: null,
       recent: null,
       previousCount: 0,
-      recentCount: i.length,
+      recentCount: points.length,
       delta: null,
     };
-  let a = Math.floor(i.length / 2),
-    o = Ce(i.slice(0, a).map((e) => e.rating)),
-    s = Ce(i.slice(a).map((e) => e.rating));
+  let half = Math.floor(points.length / 2),
+    previous = mean(points.slice(0, half).map((point) => point.rating)),
+    recent = mean(points.slice(half).map((point) => point.rating));
   return {
-    role: Se[r || ''] || r || '—',
-    points: i,
-    previous: o,
-    recent: s,
-    previousCount: a,
-    recentCount: i.length - a,
-    delta: s - o,
+    role: POSITION_ABBREVIATIONS[role || ''] || role || '—',
+    points,
+    previous,
+    recent,
+    previousCount: half,
+    recentCount: points.length - half,
+    delta: recent - previous,
   };
 }
-function Pe({ matches: e }) {
+function MatchStrip({ matches }) {
   return (
     <div className="paper-proof-matches">
-      {e.map((e) => (
-        <div key={e.matchId}>
-          <time>{Te(e)}</time>
-          <span>{Ee(e)}</span>
-          <b>{De(e)}</b>
-          <i className={Q(e)}>{Q(e)}</i>
+      {matches.map((match) => (
+        <div key={match.matchId}>
+          <time>{formatMatchTime(match)}</time>
+          <span>{getOpponentName(match)}</span>
+          <b>{formatScore(match)}</b>
+          <i className={getResultLetter(match)}>{getResultLetter(match)}</i>
         </div>
       ))}
     </div>
   );
 }
-function Fe({ members: e, matches: t }) {
-  let n = useMemo(() => G(t), [t]),
-    [r, i] = useState(''),
-    [a, o] = useState(''),
-    [s, c] = useState(''),
-    l = n.find((e) => e.day === r) || n[0],
-    d = useMemo(() => K(l?.games || []), [l]),
-    f = Me(d.players, l?.day || ''),
-    p = ke(d.players, d.winners, d.goals, l?.day),
-    m = Ae(l?.games || []),
-    h = d.winners[0] || d.players.find((e) => e.name === p.name),
-    g = L(d.players, l?.day || ''),
-    v = L(e.map(R), 'stagione'),
-    y =
-      e.find((e) => e.name === a) ||
-      e.find((e) => e.name.toLowerCase() === h?.name.toLowerCase()) ||
-      e[0],
-    x = y ? Ne(y.name, t) : null,
-    S = y
-      ? V(y, e, {
+function DayAfter({ members, matches }) {
+  let nights = useMemo(() => groupByNight(matches), [matches]),
+    [nightChoice, setNightChoice] = useState(''),
+    [protagonistChoice, setProtagonistChoice] = useState(''),
+    [copyState, setCopyState] = useState(''),
+    selectedNight =
+      nights.find((night) => night.day === nightChoice) || nights[0],
+    nightStats = useMemo(
+      () => summarizeNight(selectedNight?.games || []),
+      [selectedNight],
+    ),
+    trials = buildTrials(nightStats.players, selectedNight?.day || ''),
+    cover = buildCover(
+      nightStats.players,
+      nightStats.winners,
+      nightStats.goals,
+      selectedNight?.day,
+    ),
+    turningPoints = buildTurningPoints(selectedNight?.games || []),
+    coverPlayer =
+      nightStats.winners[0] ||
+      nightStats.players.find((player) => player.name === cover.name),
+    nightQuotes = assignQuotes(nightStats.players, selectedNight?.day || ''),
+    seasonQuotes = assignQuotes(members.map(toQuotePlayer), 'stagione'),
+    protagonist =
+      members.find((member) => member.name === protagonistChoice) ||
+      members.find(
+        (member) =>
+          member.name.toLowerCase() === coverPlayer?.name.toLowerCase(),
+      ) ||
+      members[0],
+    roleTrend = protagonist ? buildRoleTrend(protagonist.name, matches) : null,
+    seasonProfile = protagonist
+      ? buildSeasonProfile(protagonist, members, {
           games: 0,
           label: '',
           rating: 0,
@@ -2006,44 +2250,46 @@ function Fe({ members: e, matches: t }) {
           tackles: 0,
         })
       : null,
-    T = l
-      ? `BILLOCCHI · IL GIORNO DOPO\nSerata del ${we(l.day)}\n${p.title}\n${p.deck}\n${l.games.length} gare: ${d.wins}V ${d.draws}P ${d.losses}S · ${d.goals} gol fatti, ${d.against} subiti.\n${d.winners.length ? `Migliore delle gare registrate: ${d.winners.map((e) => e.name).join(' + ')} · media EA ${Z(d.winners[0].rating)}.\n` : ''}${f
+    shareText = selectedNight
+      ? `BILLOCCHI · IL GIORNO DOPO\nSerata del ${formatLongDate(selectedNight.day)}\n${cover.title}\n${cover.deck}\n${selectedNight.games.length} gare: ${nightStats.wins}V ${nightStats.draws}P ${nightStats.losses}S · ${nightStats.goals} gol fatti, ${nightStats.against} subiti.\n${nightStats.winners.length ? `Migliore delle gare registrate: ${nightStats.winners.map((winner) => winner.name).join(' + ')} · media EA ${formatRating(nightStats.winners[0].rating)}.\n` : ''}${trials
           .map(
-            ({ player: e, trial: t }) =>
-              `\n${e.name} · ${Z(e.rating)} EA\nElogio: ${t.praise}\nAccusa: ${t.charge}\nProva: ${t.proof}\nVerdetto: ${t.verdict}`,
+            ({ player, trial }) =>
+              `\n${player.name} · ${formatRating(player.rating)} EA\nElogio: ${trial.praise}\nAccusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
           )
           .join('\n')}\nhttps://billocchi-club.kr3n.chatgpt.site/`
       : '';
-  async function E() {
+  async function copyEdition() {
     try {
-      await navigator.clipboard.writeText(T);
-      c('ok');
+      await navigator.clipboard.writeText(shareText);
+      setCopyState('ok');
     } catch {
-      c('manual');
+      setCopyState('manual');
     }
   }
-  let D = [...d.players].sort((e, t) => t.goals - e.goals)[0],
-    te = [...d.players].sort((e, t) => t.assists - e.assists)[0];
+  let topScorer = [...nightStats.players].sort((a, b) => b.goals - a.goals)[0],
+    topAssister = [...nightStats.players].sort(
+      (a, b) => b.assists - a.assists,
+    )[0];
   return (
     <section className="day-after" id="giorno-dopo">
       <div className="paper-edition-bar">
         <span>LA VOCE DELLO SPOGLIATOIO</span>
-        {l ? (
+        {selectedNight ? (
           <label>
             Serata
             <select
-              value={l.day}
-              onChange={(e) => {
-                i(e.target.value);
-                c('');
+              value={selectedNight.day}
+              onChange={(event) => {
+                setNightChoice(event.target.value);
+                setCopyState('');
               }}
               aria-label="Scegli la serata del giornale"
             >
-              {n.map((e) => (
-                <option key={e.day} value={e.day}>
-                  {we(e.day)}
+              {nights.map((night) => (
+                <option key={night.day} value={night.day}>
+                  {formatLongDate(night.day)}
                   {' · '}
-                  {e.games.length}
+                  {night.games.length}
                   {' gare'}
                 </option>
               ))}
@@ -2073,68 +2319,72 @@ function Fe({ members: e, matches: t }) {
         <a href="#romanzo">Il romanzo dei Pro</a>
         <a href="#voti">I voti</a>
       </div>
-      {l ? (
+      {selectedNight ? (
         <>
           <div className="paper-cover">
             <article className="paper-lead">
               <span className="paper-eyebrow">
                 {'LA COPERTINA / '}
-                {l.games.length}
+                {selectedNight.games.length}
                 {' PARTITE DELL’EDIZIONE'}
               </span>
-              <h2>{p.title}</h2>
-              <p className="paper-deck">{p.deck}</p>
+              <h2>{cover.title}</h2>
+              <p className="paper-deck">{cover.deck}</p>
               <details className="paper-lead-details">
                 <summary>Apri la storia e le cifre</summary>
                 <p>
-                  {d.wins}
+                  {nightStats.wins}
                   {' vittorie, '}
-                  {d.draws}
+                  {nightStats.draws}
                   {' pareggi e '}
-                  {d.losses}
+                  {nightStats.losses}
                   {' sconfitte. '}
-                  {d.goals}
+                  {nightStats.goals}
                   {' reti segnate e '}
-                  {d.against}
+                  {nightStats.against}
                   {' subite: '}
-                  {d.goals > d.against
+                  {nightStats.goals > nightStats.against
                     ? 'l’attacco sostiene un saldo positivo'
-                    : d.goals < d.against
+                    : nightStats.goals < nightStats.against
                       ? 'il saldo chiede più efficacia e più tenuta del risultato'
                       : 'la serata chiude in equilibrio anche nelle reti'}
                   .
                 </p>
-                {h && <p>{je(h, l.day).praise}</p>}
-                <Pe matches={l.games} />
+                {coverPlayer && (
+                  <p>{buildTrial(coverPlayer, selectedNight.day).praise}</p>
+                )}
+                <MatchStrip matches={selectedNight.games} />
               </details>
             </article>
             <aside className="paper-cover-side">
               <div className="paper-cover-award">
                 <Trophy size={20} />
                 <span>
-                  {d.winners.length > 1
+                  {nightStats.winners.length > 1
                     ? 'I MIGLIORI DELLE GARE REGISTRATE'
                     : 'IL MIGLIORE DELLE GARE REGISTRATE'}
                 </span>
                 <strong>
-                  {d.winners.length
-                    ? d.winners.map((e) => e.name).join(' + ')
+                  {nightStats.winners.length
+                    ? nightStats.winners
+                        .map((winner) => winner.name)
+                        .join(' + ')
                     : 'Premio non assegnato'}
                 </strong>
-                {d.winners.length > 0 && (
+                {nightStats.winners.length > 0 && (
                   <div>
-                    <b>{Z(d.winners[0].rating)}</b>
+                    <b>{formatRating(nightStats.winners[0].rating)}</b>
                     <small>
                       MEDIA EA / 10
                       <br />
-                      {d.winners[0].games}/{l.games.length}
+                      {nightStats.winners[0].games}/{selectedNight.games.length}
                       {' PRESENZE'}
                     </small>
                   </div>
                 )}
               </div>
               <div className="paper-cover-number">
-                <b>{d.goals}</b>
+                <b>{nightStats.goals}</b>
                 <span>
                   GOL DEL CLUB
                   <br />
@@ -2142,9 +2392,9 @@ function Fe({ members: e, matches: t }) {
                 </span>
               </div>
               <p>
-                {d.wins > d.losses
+                {nightStats.wins > nightStats.losses
                   ? 'Il bilancio sorride. Il tribunale, però, apre lo stesso.'
-                  : d.losses > d.wins
+                  : nightStats.losses > nightStats.wins
                     ? 'Il bilancio punge. Le cifre decidono chi merita l’applauso.'
                     : 'Il bilancio resta in equilibrio. Gli spunti per parlarne, molto meno.'}
               </p>
@@ -2154,15 +2404,15 @@ function Fe({ members: e, matches: t }) {
             <div className="paper-record">
               <span>IL BILANCIO</span>
               <strong>
-                {d.wins}
-                <small>V</small> {d.draws}
-                <small>P</small> {d.losses}
+                {nightStats.wins}
+                <small>V</small> {nightStats.draws}
+                <small>P</small> {nightStats.losses}
                 <small>S</small>
               </strong>
               <p>
-                {d.goals}
+                {nightStats.goals}
                 {' fatti · '}
-                {d.against}
+                {nightStats.against}
                 {' subiti'}
               </p>
             </div>
@@ -2170,29 +2420,32 @@ function Fe({ members: e, matches: t }) {
               className="paper-score-strip"
               aria-label="Partite della serata, dalla prima all’ultima"
             >
-              {l.games.map((e, t) => (
-                <details key={e.matchId} className={`paper-score ${Q(e)}`}>
+              {selectedNight.games.map((game, index) => (
+                <details
+                  key={game.matchId}
+                  className={`paper-score ${getResultLetter(game)}`}
+                >
                   <summary>
                     <span>
                       {'GARA '}
-                      {t + 1}
+                      {index + 1}
                       {' · '}
-                      {Te(e)}
+                      {formatMatchTime(game)}
                     </span>
-                    <b>{De(e)}</b>
-                    <small>{Ee(e)}</small>
+                    <b>{formatScore(game)}</b>
+                    <small>{getOpponentName(game)}</small>
                   </summary>
                   <div className="paper-match-pros">
-                    {K([e]).players.map((e) => (
-                      <div key={e.id}>
-                        <strong>{e.name}</strong>
+                    {summarizeNight([game]).players.map((player) => (
+                      <div key={player.id}>
+                        <strong>{player.name}</strong>
                         <span>
-                          {e.goals}
+                          {player.goals}
                           {' G · '}
-                          {e.assists}
+                          {player.assists}
                           {' A'}
                         </span>
-                        <b>{Z(e.rating)}</b>
+                        <b>{formatRating(player.rating)}</b>
                       </div>
                     ))}
                   </div>
@@ -2206,15 +2459,15 @@ function Fe({ members: e, matches: t }) {
               <h3>Le partite lasciano il segno.</h3>
             </div>
             <div className="paper-turning-grid">
-              {m.map((e, t) => (
-                <article key={e.tag}>
-                  <span className="paper-story-no">0{t + 1}</span>
-                  <span className="paper-eyebrow">{e.tag}</span>
-                  <h4>{e.title}</h4>
-                  <p>{e.text}</p>
+              {turningPoints.map((turningPoint, index) => (
+                <article key={turningPoint.tag}>
+                  <span className="paper-story-no">0{index + 1}</span>
+                  <span className="paper-eyebrow">{turningPoint.tag}</span>
+                  <h4>{turningPoint.title}</h4>
+                  <p>{turningPoint.text}</p>
                   <details>
                     <summary>Le partite che lo raccontano</summary>
-                    <Pe matches={e.games} />
+                    <MatchStrip matches={turningPoint.games} />
                   </details>
                 </article>
               ))}
@@ -2236,43 +2489,45 @@ function Fe({ members: e, matches: t }) {
               </p>
             </div>
             <div className="paper-trial-grid">
-              {f.map(({ player: e, trial: t }, n) => {
-                let r = d.winners.some((t) => t.id === e.id);
+              {trials.map(({ player, trial }, index) => {
+                let isCoverPro = nightStats.winners.some(
+                  (winner) => winner.id === player.id,
+                );
                 return (
                   <details
-                    key={e.id}
-                    className={`paper-trial ${r ? 'is-cover-pro' : ''}`}
+                    key={player.id}
+                    className={`paper-trial ${isCoverPro ? 'is-cover-pro' : ''}`}
                   >
                     <summary>
                       <div className="paper-trial-top">
                         <span>
                           {'FASCICOLO '}
-                          {String(n + 1).padStart(2, '0')}
+                          {String(index + 1).padStart(2, '0')}
                         </span>
-                        {r && (
+                        {isCoverPro && (
                           <Trophy
                             size={17}
                             aria-label="Migliore delle gare registrate"
                           />
                         )}
                         <b>
-                          {Z(e.rating)}
+                          {formatRating(player.rating)}
                           <small>EA / 10</small>
                         </b>
                       </div>
-                      <h4>{e.name}</h4>
-                      <p className="paper-trial-title">{t.title}</p>
+                      <h4>{player.name}</h4>
+                      <p className="paper-trial-title">{trial.title}</p>
                       <div className="paper-trial-stats">
                         <span>
-                          {e.games}
+                          {player.games}
                           {' PRES.'}
                         </span>
                         <span>
-                          {e.goals}
+                          {player.goals}
                           {' GOL'}
                         </span>
                         <span>
-                          {e.assists}
+                          {player.assists}
                           {' ASSIST'}
                         </span>
                       </div>
@@ -2283,44 +2538,53 @@ function Fe({ members: e, matches: t }) {
                     <div className="paper-case-body">
                       <div className="paper-praise">
                         <span>L’ELOGIO</span>
-                        <p>{t.praise}</p>
+                        <p>{trial.praise}</p>
                       </div>
                       <blockquote>
                         <span>L’ACCUSA DELLO SPOGLIATOIO</span>
                         <Quote size={18} aria-hidden="true" />
-                        <p>{t.charge}</p>
+                        <p>{trial.charge}</p>
                       </blockquote>
-                      <Tag_ve player={e} quote={g.get(e.name)} />
+                      <AdaniComment
+                        player={player}
+                        quote={nightQuotes.get(player.name)}
+                      />
                       <details className="paper-verdict">
                         <summary>Le prove e il verdetto</summary>
                         <div>
                           <span>AGLI ATTI</span>
-                          <p>{t.proof}</p>
+                          <p>{trial.proof}</p>
                           <div className="paper-trial-evidence">
                             <span>
-                              {e.passPct === null ? '—' : `${e.passPct}%`}
+                              {player.passPct === null
+                                ? '—'
+                                : `${player.passPct}%`}
                               {' passaggi'}
                             </span>
                             <span>
-                              {e.tackles}/{e.tackleAttempts}
+                              {player.tackles}/{player.tackleAttempts}
                               {' contrasti'}
                             </span>
                             <span>
-                              {e.saves}
+                              {player.saves}
                               {' parate'}
                             </span>
                             <span>
-                              {e.reds}
+                              {player.reds}
                               {' rossi'}
                             </span>
                           </div>
                           <span>IL VERDETTO</span>
-                          <p>{t.verdict}</p>
+                          <p>{trial.verdict}</p>
                           <small>
                             {'Reparti giocati: '}
-                            {e.roles.map((e) => Se[e] || e).join(' / ')}
+                            {player.roles
+                              .map(
+                                (role) => POSITION_ABBREVIATIONS[role] || role,
+                              )
+                              .join(' / ')}
                             {'. Totali sulle '}
-                            {e.games}
+                            {player.games}
                             {' presenze registrate.'}
                           </small>
                         </div>
@@ -2336,24 +2600,30 @@ function Fe({ members: e, matches: t }) {
             <div>
               <span>ANNOTAZIONI A MARGINE</span>
               <p>
-                {D?.goals ? `${D.name}: ${D.goals} gol. ` : ''}
-                {te?.assists ? `${te.name}: ${te.assists} assist. ` : ''}
-                {d.players.length}
+                {topScorer?.goals
+                  ? `${topScorer.name}: ${topScorer.goals} gol. `
+                  : ''}
+                {topAssister?.assists
+                  ? `${topAssister.name}: ${topAssister.assists} assist. `
+                  : ''}
+                {nightStats.players.length}
                 {' Pro hanno lasciato una riga in questa edizione.'}
               </p>
             </div>
-            <button onClick={E}>
-              {s === 'ok' ? <Check size={17} /> : <Copy size={17} />}{' '}
-              {s === 'ok' ? 'Edizione copiata' : 'Copia per lo spogliatoio'}
+            <button onClick={copyEdition}>
+              {copyState === 'ok' ? <Check size={17} /> : <Copy size={17} />}{' '}
+              {copyState === 'ok'
+                ? 'Edizione copiata'
+                : 'Copia per lo spogliatoio'}
             </button>
           </div>
-          {s === 'manual' && (
+          {copyState === 'manual' && (
             <label className="paper-manual-copy">
               Seleziona e copia il testo
               <textarea
                 readOnly
-                value={T}
-                onFocus={(e) => e.currentTarget.select()}
+                value={shareText}
+                onFocus={(event) => event.currentTarget.select()}
               />
             </label>
           )}
@@ -2367,7 +2637,7 @@ function Fe({ members: e, matches: t }) {
           </p>
         </div>
       )}
-      {y && S && (
+      {protagonist && seasonProfile && (
         <section className="paper-season" id="romanzo">
           <div className="paper-section-heading">
             <div>
@@ -2378,12 +2648,12 @@ function Fe({ members: e, matches: t }) {
               Scegli il protagonista
               <select
                 aria-label="Protagonista del romanzo"
-                value={y.name}
-                onChange={(e) => o(e.target.value)}
+                value={protagonist.name}
+                onChange={(event) => setProtagonistChoice(event.target.value)}
               >
-                {e.map((e) => (
-                  <option key={e.name} value={e.name}>
-                    {e.name}
+                {members.map((member) => (
+                  <option key={member.name} value={member.name}>
+                    {member.name}
                   </option>
                 ))}
               </select>
@@ -2392,125 +2662,132 @@ function Fe({ members: e, matches: t }) {
           <details className="paper-longread">
             <summary>
               {'Leggi il ritratto e l’andamento di '}
-              {y.name}
+              {protagonist.name}
             </summary>
             <div className="paper-season-layout">
               <aside className="paper-season-index">
                 <BookOpen size={23} />
-                <span>{S.stage}</span>
-                <h4>{y.name}</h4>
+                <span>{seasonProfile.stage}</span>
+                <h4>{protagonist.name}</h4>
                 <div>
-                  <b>{y.gamesPlayed}</b>
+                  <b>{protagonist.gamesPlayed}</b>
                   <span>PRESENZE STAGIONALI</span>
                 </div>
                 <div className="paper-season-totals">
                   <span>
-                    <b>{y.goals}</b>
+                    <b>{protagonist.goals}</b>
                     {' GOL'}
                   </span>
                   <span>
-                    <b>{y.assists}</b>
+                    <b>{protagonist.assists}</b>
                     {' ASSIST'}
                   </span>
                 </div>
                 <p>
                   {'Media EA '}
-                  <strong>{X(y.gamesPlayed) ? y.ratingAve : '—'}</strong>
+                  <strong>
+                    {toFiniteNumber(protagonist.gamesPlayed)
+                      ? protagonist.ratingAve
+                      : '—'}
+                  </strong>
                   <br />
                   Totali stagionali · tutti i ruoli
                 </p>
                 <a href="#rosa">Apri le figurine del club</a>
               </aside>
               <article className="paper-season-story">
-                <h4>{S.title}</h4>
-                <p>{S.intro}</p>
-                <Tag_ve player={R(y)} quote={v.get(y.name)} />
-                {x && (
+                <h4>{seasonProfile.title}</h4>
+                <p>{seasonProfile.intro}</p>
+                <AdaniComment
+                  player={toQuotePlayer(protagonist)}
+                  quote={seasonQuotes.get(protagonist.name)}
+                />
+                {roleTrend && (
                   <div className="paper-trend">
                     <div>
                       <span>
                         {'L’ARCO RECENTE / '}
-                        {x.role}
+                        {roleTrend.role}
                       </span>
                       <strong>
-                        {x.delta === null
+                        {roleTrend.delta === null
                           ? 'La storia sta raccogliendo le prime prove.'
-                          : x.delta >= 0.3
+                          : roleTrend.delta >= 0.3
                             ? 'Il capitolo recente alza il livello.'
-                            : x.delta <= -0.3
+                            : roleTrend.delta <= -0.3
                               ? 'Il capitolo recente chiede una risposta.'
                               : 'Il capitolo recente segue il suo riferimento.'}
                       </strong>
                     </div>
-                    {x.points.length > 0 && (
+                    {roleTrend.points.length > 0 && (
                       <svg
                         viewBox="0 0 320 90"
                         role="img"
-                        aria-label={`Voti EA cronologici nelle ${x.points.length} presenze archiviate da ${x.role}: ${x.points.map((e) => e.rating).join(', ')}`}
+                        aria-label={`Voti EA cronologici nelle ${roleTrend.points.length} presenze archiviate da ${roleTrend.role}: ${roleTrend.points.map((point) => point.rating).join(', ')}`}
                       >
                         <line x1="10" y1="74" x2="310" y2="74" />
                         <line x1="10" y1="39" x2="310" y2="39" />
-                        {x.points.length > 1 && (
+                        {roleTrend.points.length > 1 && (
                           <polyline
-                            points={x.points
+                            points={roleTrend.points
                               .map(
-                                (e, t) =>
-                                  `${10 + (t * 300) / (x.points.length - 1)},${81 - e.rating * 7}`,
+                                (point, index) =>
+                                  `${10 + (index * 300) / (roleTrend.points.length - 1)},${81 - point.rating * 7}`,
                               )
                               .join(' ')}
                           />
                         )}
-                        {x.points.map((e, t) => (
+                        {roleTrend.points.map((point, index) => (
                           <circle
-                            key={e.matchId}
+                            key={point.matchId}
                             cx={
-                              x.points.length === 1
+                              roleTrend.points.length === 1
                                 ? 160
-                                : 10 + (t * 300) / (x.points.length - 1)
+                                : 10 +
+                                  (index * 300) / (roleTrend.points.length - 1)
                             }
-                            cy={81 - e.rating * 7}
+                            cy={81 - point.rating * 7}
                             r="3.5"
                           />
                         ))}
                       </svg>
                     )}
                     <p>
-                      {x.delta === null
-                        ? `${x.points.length} presenze con voto archiviate nell’ultimo reparto giocato (${x.role}). Il confronto tra due blocchi parte da quattro presenze con voto nello stesso reparto.`
-                        : `Le ultime ${x.recentCount} presenze archiviate da ${x.role} valgono ${Z(x.recent)}, contro ${Z(x.previous)} nelle ${x.previousCount} precedenti: ${x.delta >= 0 ? '+' : ''}${x.delta.toFixed(2)} punti EA. Il confronto usa lo stesso reparto.`}
+                      {roleTrend.delta === null
+                        ? `${roleTrend.points.length} presenze con voto archiviate nell’ultimo reparto giocato (${roleTrend.role}). Il confronto tra due blocchi parte da quattro presenze con voto nello stesso reparto.`
+                        : `Le ultime ${roleTrend.recentCount} presenze archiviate da ${roleTrend.role} valgono ${formatRating(roleTrend.recent)}, contro ${formatRating(roleTrend.previous)} nelle ${roleTrend.previousCount} precedenti: ${roleTrend.delta >= 0 ? '+' : ''}${roleTrend.delta.toFixed(2)} punti EA. Il confronto usa lo stesso reparto.`}
                     </p>
-                    {x.points.length > 1 && (
+                    {roleTrend.points.length > 1 && (
                       <small>
-                        {new Date(x.points[0].date * 1e3).toLocaleDateString(
-                          'it-IT',
-                          {
-                            timeZone: 'Europe/Rome',
-                          },
-                        )}
+                        {new Date(
+                          roleTrend.points[0].date * 1e3,
+                        ).toLocaleDateString('it-IT', {
+                          timeZone: 'Europe/Rome',
+                        })}
                         {' — '}
                         {new Date(
-                          x.points.at(-1).date * 1e3,
+                          roleTrend.points.at(-1).date * 1e3,
                         ).toLocaleDateString('it-IT', {
                           timeZone: 'Europe/Rome',
                         })}
                         {' · '}
-                        {x.points.length}
+                        {roleTrend.points.length}
                         {' voti archiviati · dal più vecchio al più recente'}
                       </small>
                     )}
                   </div>
                 )}
                 <div className="paper-chapters">
-                  {S.sections.map((e, t) => (
-                    <details key={e.label}>
+                  {seasonProfile.sections.map((section, index) => (
+                    <details key={section.label}>
                       <summary>
                         <span>
                           {'CAPITOLO '}
-                          {String(t + 1).padStart(2, '0')}
+                          {String(index + 1).padStart(2, '0')}
                         </span>
-                        <strong>{e.label}</strong>
+                        <strong>{section.label}</strong>
                       </summary>
-                      <p>{e.text}</p>
+                      <p>{section.text}</p>
                     </details>
                   ))}
                 </div>
@@ -2539,7 +2816,7 @@ function Fe({ members: e, matches: t }) {
     </section>
   );
 }
-const Ie = [
+const SECTIONS = [
   {
     id: 'giorno-dopo',
     label: 'Il giorno dopo',
@@ -2569,32 +2846,34 @@ const Ie = [
     label: 'Partite',
   },
 ];
-function Le() {
-  let [e, t] = useState('giorno-dopo'),
-    n = useRef(null);
+function SectionNav() {
+  let [activeId, setActiveId] = useState('giorno-dopo'),
+    navRef = useRef(null);
   useEffect(() => {
-    let e = 0,
-      r = () => {
-        e = 0;
-        let r =
-            (n.current?.closest('header')?.getBoundingClientRect().bottom ||
-              100) + 85,
-          i = Ie[0].id;
-        for (let e of Ie) {
-          let t = document.getElementById(e.id);
-          t && t.getBoundingClientRect().top <= r && (i = e.id);
+    let frame = 0,
+      update = () => {
+        frame = 0;
+        let offset =
+            (navRef.current?.closest('header')?.getBoundingClientRect()
+              .bottom || 100) + 85,
+          currentId = SECTIONS[0].id;
+        for (let section of SECTIONS) {
+          let element = document.getElementById(section.id);
+          element &&
+            element.getBoundingClientRect().top <= offset &&
+            (currentId = section.id);
         }
-        t(i);
+        setActiveId(currentId);
       },
-      i = () => {
-        e ||= requestAnimationFrame(r);
+      onScroll = () => {
+        frame ||= requestAnimationFrame(update);
       },
-      a = (e) => {
-        let t = document.getElementById(e.slice(1));
-        if (t) {
-          for (let e = t.parentElement; e; e = e.parentElement)
-            e instanceof HTMLDetailsElement && (e.open = true);
-          t.scrollIntoView({
+      goToHash = (hash) => {
+        let target = document.getElementById(hash.slice(1));
+        if (target) {
+          for (let node = target.parentElement; node; node = node.parentElement)
+            node instanceof HTMLDetailsElement && (node.open = true);
+          target.scrollIntoView({
             behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
               .matches
               ? 'auto'
@@ -2603,263 +2882,318 @@ function Le() {
           });
         }
       },
-      o = (e) => {
+      onClick = (event) => {
         if (
-          e.defaultPrevented ||
-          e.ctrlKey ||
-          e.metaKey ||
-          e.shiftKey ||
-          e.altKey ||
-          e.button !== 0
+          event.defaultPrevented ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey ||
+          event.altKey ||
+          event.button !== 0
         )
           return;
-        let t = e.target.closest('a[href^="#"]')?.getAttribute('href');
-        !t ||
-          !document.getElementById(t.slice(1)) ||
-          (e.preventDefault(), history.pushState(null, '', t), a(t));
+        let href = event.target.closest('a[href^="#"]')?.getAttribute('href');
+        !href ||
+          !document.getElementById(href.slice(1)) ||
+          (event.preventDefault(),
+          history.pushState(null, '', href),
+          goToHash(href));
       },
-      s = () => a(location.hash);
-    document.addEventListener('click', o);
-    window.addEventListener('hashchange', s);
-    window.addEventListener('scroll', i, {
+      onHashChange = () => goToHash(location.hash);
+    document.addEventListener('click', onClick);
+    window.addEventListener('hashchange', onHashChange);
+    window.addEventListener('scroll', onScroll, {
       passive: true,
     });
-    window.addEventListener('resize', i);
-    r();
-    location.hash && a(location.hash);
-    let c = document.querySelectorAll(
+    window.addEventListener('resize', onScroll);
+    update();
+    location.hash && goToHash(location.hash);
+    let animatedSections = document.querySelectorAll(
         'main > section:not(.day-after), .paper-cover, .paper-results, .paper-turning, .paper-trials, .paper-season',
       ),
-      l = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      observer = window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? null
         : new IntersectionObserver(
-            (e) => {
-              for (let t of e)
-                t.target.classList.toggle('in-view', t.isIntersecting);
+            (entries) => {
+              for (let entry of entries)
+                entry.target.classList.toggle('in-view', entry.isIntersecting);
             },
             {
               threshold: 0,
             },
           );
-    l &&
-      c.forEach((e) => {
-        e.classList.add('scroll-fade');
-        e.getBoundingClientRect().top < innerHeight &&
-          e.classList.add('in-view');
-        l.observe(e);
+    observer &&
+      animatedSections.forEach((section) => {
+        section.classList.add('scroll-fade');
+        section.getBoundingClientRect().top < innerHeight &&
+          section.classList.add('in-view');
+        observer.observe(section);
       });
     return () => {
-      cancelAnimationFrame(e);
-      l?.disconnect();
-      c.forEach((e) => e.classList.remove('scroll-fade', 'in-view'));
-      document.removeEventListener('click', o);
-      window.removeEventListener('hashchange', s);
-      window.removeEventListener('scroll', i);
-      window.removeEventListener('resize', i);
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      animatedSections.forEach((section) =>
+        section.classList.remove('scroll-fade', 'in-view'),
+      );
+      document.removeEventListener('click', onClick);
+      window.removeEventListener('hashchange', onHashChange);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
   }, []);
   useEffect(() => {
-    let t = n.current,
-      r = t?.querySelector(`a[href="#${e}"]`);
-    if (!t || !r) return;
-    let i =
-      r.getBoundingClientRect().left -
-      t.getBoundingClientRect().left +
-      t.scrollLeft;
-    (i < t.scrollLeft || i + r.offsetWidth > t.scrollLeft + t.clientWidth) &&
-      t.scrollTo({
-        left: Math.max(0, i - (t.clientWidth - r.offsetWidth) / 2),
+    let nav = navRef.current,
+      link = nav?.querySelector(`a[href="#${activeId}"]`);
+    if (!nav || !link) return;
+    let linkLeft =
+      link.getBoundingClientRect().left -
+      nav.getBoundingClientRect().left +
+      nav.scrollLeft;
+    (linkLeft < nav.scrollLeft ||
+      linkLeft + link.offsetWidth > nav.scrollLeft + nav.clientWidth) &&
+      nav.scrollTo({
+        left: Math.max(0, linkLeft - (nav.clientWidth - link.offsetWidth) / 2),
         behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
           ? 'auto'
           : 'smooth',
       });
-  }, [e]);
+  }, [activeId]);
   return (
-    <nav ref={n} className="section-navigation" aria-label="Sezioni del club">
-      {Ie.map((t) => (
+    <nav
+      ref={navRef}
+      className="section-navigation"
+      aria-label="Sezioni del club"
+    >
+      {SECTIONS.map((section) => (
         <a
-          key={t.id}
-          href={`#${t.id}`}
-          className={e === t.id ? 'is-active' : ''}
-          aria-current={e === t.id ? 'location' : undefined}
+          key={section.id}
+          href={`#${section.id}`}
+          className={activeId === section.id ? 'is-active' : ''}
+          aria-current={activeId === section.id ? 'location' : undefined}
         >
           <span className="nav-dot" aria-hidden="true" />
-          {t.label}
+          {section.label}
         </a>
       ))}
     </nav>
   );
 }
-const $ = (e) => Number(e || 0);
-const Re = (e, t) => ($(t) ? ($(e) / $(t)).toFixed(2) : '—');
-const ze = 'https://www.ea.com/it-it/games/ea-sports-fc/clubs';
-function Be({ value: e }) {
-  let [t, n] = useState(0);
+const ratio = (numerator, denominator) =>
+  toNumber(denominator)
+    ? (toNumber(numerator) / toNumber(denominator)).toFixed(2)
+    : '—';
+const EA_CLUBS_URL = 'https://www.ea.com/it-it/games/ea-sports-fc/clubs';
+function CountUp({ value }) {
+  let [display, setDisplay] = useState(0);
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      n(e);
+      setDisplay(value);
       return;
     }
-    let t = 0,
-      r = performance.now(),
-      i = (a) => {
-        let o = Math.min(1, (a - r) / 950);
-        n(Math.round(e * (1 - (1 - o) ** 3)));
-        o < 1 && (t = requestAnimationFrame(i));
+    let frame = 0,
+      start = performance.now(),
+      tick = (now) => {
+        let progress = Math.min(1, (now - start) / 950);
+        setDisplay(Math.round(value * (1 - (1 - progress) ** 3)));
+        progress < 1 && (frame = requestAnimationFrame(tick));
       };
-    t = requestAnimationFrame(i);
-    return () => cancelAnimationFrame(t);
-  }, [e]);
-  return <>{t}</>;
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  return <>{display}</>;
 }
-function Ve({ children: e, className: t = '' }) {
-  let n = useRef(null);
+function Reveal({ children, className = '' }) {
+  let ref = useRef(null);
   useEffect(() => {
-    let e = n.current;
-    if (!e) return;
-    let t = new IntersectionObserver(
-      ([n]) => {
-        n.isIntersecting && (e.classList.add('visible'), t.unobserve(e));
+    let element = ref.current;
+    if (!element) return;
+    let observer = new IntersectionObserver(
+      ([entry]) => {
+        entry.isIntersecting &&
+          (element.classList.add('visible'), observer.unobserve(element));
       },
       {
         threshold: 0.08,
       },
     );
-    t.observe(e);
-    return () => t.disconnect();
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
   return (
-    <div ref={n} className={`reveal ${t}`}>
-      {e}
+    <div ref={ref} className={`reveal ${className}`}>
+      {children}
     </div>
   );
 }
-const He = {
-  forward: 'ATT',
-  midfielder: 'CEN',
-  defender: 'DIF',
-  goalkeeper: 'POR',
-};
-const Ue = (e) => ($(e.proOverall) > 0 ? String(e.proOverall) : '—');
-function We(e, t) {
-  let n = [...t]
-      .sort((e, t) => $(t.timestamp) - $(e.timestamp))
-      .flatMap((t) =>
-        Object.values(t.players?.['70375'] || {}).filter(
-          (t) => t.playername.toLowerCase() === e.name.toLowerCase(),
+const formatProOverall = (member) =>
+  toNumber(member.proOverall) > 0 ? String(member.proOverall) : '—';
+function computeCardProfile(member, matches) {
+  let appearances = [...matches]
+      .sort((a, b) => toNumber(b.timestamp) - toNumber(a.timestamp))
+      .flatMap((match) =>
+        Object.values(match.players?.['70375'] || {}).filter(
+          (appearance) =>
+            appearance.playername.toLowerCase() === member.name.toLowerCase(),
         ),
       ),
-    r = n[0]?.pos || e.favoritePosition || '',
-    i = n.filter((e) => e.pos === r),
-    a = i.length,
-    o = i.reduce((e, t) => e + $(t.goals), 0),
-    s = i.reduce((e, t) => e + $(t.assists), 0),
-    c = i.reduce((e, t) => e + $(t.shots), 0),
-    l = i.reduce((e, t) => e + $(t.passesmade), 0),
-    u = i.reduce((e, t) => e + $(t.passattempts), 0),
-    d = i.reduce((e, t) => e + $(t.tacklesmade), 0),
-    f = i.reduce((e, t) => e + $(t.saves), 0),
-    p = a ? i.reduce((e, t) => e + $(t.rating), 0) / a : 0,
-    m = u ? Math.round((l / u) * 100) : 0,
-    h =
-      r === 'forward'
-        ? ((o + 0.7 * s) / Math.max(1, a)) * 9
-        : r === 'midfielder'
-          ? ((s + 0.8 * o) / Math.max(1, a)) * 8
-          : r === 'defender'
-            ? (d / Math.max(1, a)) * 2.5 + (s / Math.max(1, a)) * 4
-            : (f / Math.max(1, a)) * 2.5,
-    g = a
+    role = appearances[0]?.pos || member.favoritePosition || '',
+    roleAppearances = appearances.filter(
+      (appearance) => appearance.pos === role,
+    ),
+    games = roleAppearances.length,
+    goals = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.goals),
+      0,
+    ),
+    assists = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.assists),
+      0,
+    ),
+    shots = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.shots),
+      0,
+    ),
+    passes = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.passesmade),
+      0,
+    ),
+    passAttempts = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.passattempts),
+      0,
+    ),
+    tackles = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.tacklesmade),
+      0,
+    ),
+    saves = roleAppearances.reduce(
+      (total, appearance) => total + toNumber(appearance.saves),
+      0,
+    ),
+    rating = games
+      ? roleAppearances.reduce(
+          (total, appearance) => total + toNumber(appearance.rating),
+          0,
+        ) / games
+      : 0,
+    passPct = passAttempts ? Math.round((passes / passAttempts) * 100) : 0,
+    roleScore =
+      role === 'forward'
+        ? ((goals + 0.7 * assists) / Math.max(1, games)) * 9
+        : role === 'midfielder'
+          ? ((assists + 0.8 * goals) / Math.max(1, games)) * 8
+          : role === 'defender'
+            ? (tackles / Math.max(1, games)) * 2.5 +
+              (assists / Math.max(1, games)) * 4
+            : (saves / Math.max(1, games)) * 2.5,
+    formScore = games
       ? Math.round(
           Math.max(
             40,
             Math.min(
               99,
               50 +
-                (p - 6) * 10 +
-                Math.min(16, h) +
-                m * 0.08 -
-                Math.max(0, 5 - a) * 3,
+                (rating - 6) * 10 +
+                Math.min(16, roleScore) +
+                passPct * 0.08 -
+                Math.max(0, 5 - games) * 3,
             ),
           ),
         )
       : 0,
-    _ = $(e.gamesPlayed),
-    v = a ? 'recent' : _ ? 'season' : 'none',
-    ee = (($(e.goals) + 0.7 * $(e.assists)) / Math.max(1, _)) * 8,
-    y =
+    seasonGames = toNumber(member.gamesPlayed),
+    basis = games ? 'recent' : seasonGames ? 'season' : 'none',
+    seasonBase =
+      ((toNumber(member.goals) + 0.7 * toNumber(member.assists)) /
+        Math.max(1, seasonGames)) *
+      8,
+    seasonRaw =
       50 +
-      ($(e.ratingAve) - 6) * 10 +
-      Math.min(16, ee) +
-      $(e.passSuccessRate) * 0.08 -
-      Math.max(0, 5 - _) * 3,
-    b = v === 'season' ? Math.round(Math.max(40, Math.min(99, y))) : g,
-    x =
-      v === 'none'
+      (toNumber(member.ratingAve) - 6) * 10 +
+      Math.min(16, seasonBase) +
+      toNumber(member.passSuccessRate) * 0.08 -
+      Math.max(0, 5 - seasonGames) * 3,
+    score =
+      basis === 'season'
+        ? Math.round(Math.max(40, Math.min(99, seasonRaw)))
+        : formScore,
+    tier =
+      basis === 'none'
         ? 'unranked'
-        : b >= 92
+        : score >= 92
           ? 'iridescent'
-          : b >= 87
+          : score >= 87
             ? 'platinum'
-            : b >= 78
+            : score >= 78
               ? 'gold'
-              : b >= 70
+              : score >= 70
                 ? 'silver'
                 : 'bronze',
-    S = i.slice(0, 3),
-    C = S.length ? S.reduce((e, t) => e + $(t.rating), 0) / S.length : 0,
-    w = S.reduce((e, t) => e + $(t.goals) + $(t.assists), 0),
-    T = S.length === 3 && C >= 7.8 && w >= 4;
+    recentAppearances = roleAppearances.slice(0, 3),
+    recentRating = recentAppearances.length
+      ? recentAppearances.reduce(
+          (total, appearance) => total + toNumber(appearance.rating),
+          0,
+        ) / recentAppearances.length
+      : 0,
+    recentContrib = recentAppearances.reduce(
+      (total, appearance) =>
+        total + toNumber(appearance.goals) + toNumber(appearance.assists),
+      0,
+    ),
+    hot =
+      recentAppearances.length === 3 &&
+      recentRating >= 7.8 &&
+      recentContrib >= 4;
   return {
-    role: r,
-    label: He[r] || '—',
-    games: a,
-    goals: o,
-    assists: s,
-    shots: c,
-    passes: l,
-    passAttempts: u,
-    tackles: d,
-    saves: f,
-    rating: p,
-    passPct: m,
-    tier: x,
-    score: b,
-    basis: v,
-    hot: T,
-    recentRating: C,
-    recentContrib: w,
+    role,
+    label: POSITION_ABBREVIATIONS[role] || '—',
+    games,
+    goals,
+    assists,
+    shots,
+    passes,
+    passAttempts,
+    tackles,
+    saves,
+    rating,
+    passPct,
+    tier,
+    score,
+    basis,
+    hot,
+    recentRating,
+    recentContrib,
   };
 }
-function Ge({ p: e, s: t, onClick: n }) {
-  let r = [
-    [e.goals, 'GOL'],
-    [e.assists, 'AST'],
-    [e.gamesPlayed, 'PRE'],
-    [`${e.passSuccessRate}%`, 'PAS'],
-    [e.tacklesMade, 'CTR'],
-    [e.ratingAve, 'MED'],
+function CollectorCard({ member, profile, onClick }) {
+  let stats = [
+    [member.goals, 'GOL'],
+    [member.assists, 'AST'],
+    [member.gamesPlayed, 'PRE'],
+    [`${member.passSuccessRate}%`, 'PAS'],
+    [member.tacklesMade, 'CTR'],
+    [member.ratingAve, 'MED'],
   ];
   return (
     <button
-      className={`collector-card ${t.tier} ${t.hot ? 'on-fire' : ''}`}
-      onClick={n}
-      aria-label={`${e.name}, overall EA ${Ue(e)}, ${t.label}, ${e.goals} gol e ${e.assists} assist stagionali${t.hot ? ', in forma eccezionale' : ''}. Apri la pagella`}
+      className={`collector-card ${profile.tier} ${profile.hot ? 'on-fire' : ''}`}
+      onClick={onClick}
+      aria-label={`${member.name}, overall EA ${formatProOverall(member)}, ${profile.label}, ${member.goals} gol e ${member.assists} assist stagionali${profile.hot ? ', in forma eccezionale' : ''}. Apri la pagella`}
     >
       <span className="collector-rating">
-        {Ue(e)}
-        <small>{t.label}</small>
+        {formatProOverall(member)}
+        <small>{profile.label}</small>
       </span>
       <img className="collector-crest" src="/logo-billocchi.svg" alt="" />
       <span className="collector-tier">
-        {t.basis === 'season'
-          ? `INDICE STAG. ${t.score}`
-          : t.basis === 'recent'
-            ? `FORMA ${t.score}`
+        {profile.basis === 'season'
+          ? `INDICE STAG. ${profile.score}`
+          : profile.basis === 'recent'
+            ? `FORMA ${profile.score}`
             : 'EA OVERALL'}
       </span>
-      {t.hot && <span className="collector-fire-label">ON FIRE</span>}
-      {e.name.toLowerCase() === 'we_belen' ? (
+      {profile.hot && <span className="collector-fire-label">ON FIRE</span>}
+      {member.name.toLowerCase() === 'we_belen' ? (
         <img
           className="collector-player-image"
           src="/cards/we-belen-portrait.webp"
@@ -2867,126 +3201,157 @@ function Ge({ p: e, s: t, onClick: n }) {
         />
       ) : (
         <span className="collector-portrait" aria-hidden="true">
-          {e.name.slice(0, 1).toUpperCase()}
+          {member.name.slice(0, 1).toUpperCase()}
         </span>
       )}
-      <span className="collector-name">{e.name}</span>
+      <span className="collector-name">{member.name}</span>
       <span className="collector-stats">
-        {r.map(([e, t]) => (
-          <span key={t}>
-            <b>{e}</b>
-            <small>{t}</small>
+        {stats.map(([value, label]) => (
+          <span key={label}>
+            <b>{value}</b>
+            <small>{label}</small>
           </span>
         ))}
       </span>
     </button>
   );
 }
-function Ke() {
-  let [e, t] = useState(re),
-    [n, r] = useState('loading'),
-    [i, a] = useState([]),
-    [o, s] = useState(),
-    [c, l] = useState(false),
-    [d, f] = useState(null),
-    p = useCallback(async () => {
-      l(true);
+function App() {
+  let [data, setData] = useState(fallbackData),
+    [connection, setConnection] = useState('loading'),
+    [freshKeys, setFreshKeys] = useState([]),
+    [lastSync, setLastSync] = useState(),
+    [refreshing, setRefreshing] = useState(false),
+    [selectedName, setSelectedName] = useState(null),
+    refresh = useCallback(async () => {
+      setRefreshing(true);
       try {
-        let e = await fetch('/api/data', {
+        let response = await fetch('/api/data', {
           cache: 'no-store',
         });
-        if (!e.ok) throw Error();
-        let n = await e.json();
-        if (!n.club?.[0] || !n.members?.members) throw Error();
-        t(n);
-        a(n.fresh || []);
-        r(
-          ['club', 'members', 'matches'].every((e) => n.fresh?.includes(e))
+        if (!response.ok) throw Error();
+        let payload = await response.json();
+        if (!payload.club?.[0] || !payload.members?.members) throw Error();
+        setData(payload);
+        setFreshKeys(payload.fresh || []);
+        setConnection(
+          ['club', 'members', 'matches'].every((key) =>
+            payload.fresh?.includes(key),
+          )
             ? 'yes'
-            : n.fresh?.length
+            : payload.fresh?.length
               ? 'partial'
               : 'no',
         );
-        s(new Date().toISOString());
+        setLastSync(new Date().toISOString());
       } catch {
-        r('no');
+        setConnection('no');
       } finally {
-        l(false);
+        setRefreshing(false);
       }
     }, []);
   useEffect(() => {
-    p();
-    let e = setInterval(p, 6e4),
-      t = () => p();
-    window.addEventListener('focus', t);
+    refresh();
+    let interval = setInterval(refresh, 6e4),
+      onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
     return () => {
-      clearInterval(e);
-      window.removeEventListener('focus', t);
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
     };
-  }, [p]);
-  let m = e.club[0],
-    _ = e.matches || [],
-    v = useMemo(
+  }, [refresh]);
+  let club = data.club[0],
+    recentMatches = data.matches || [],
+    sortedMembers = useMemo(
       () =>
-        [...e.members.members].sort(
-          (e, t) =>
-            $(t.goals) + $(t.assists) - ($(e.goals) + $(e.assists)) ||
-            $(t.goals) - $(e.goals) ||
-            $(t.gamesPlayed) - $(e.gamesPlayed) ||
-            e.name.localeCompare(t.name),
+        [...data.members.members].sort(
+          (a, b) =>
+            toNumber(b.goals) +
+              toNumber(b.assists) -
+              (toNumber(a.goals) + toNumber(a.assists)) ||
+            toNumber(b.goals) - toNumber(a.goals) ||
+            toNumber(b.gamesPlayed) - toNumber(a.gamesPlayed) ||
+            a.name.localeCompare(b.name),
         ),
-      [e],
+      [data],
     ),
-    ee = v.map((e) => ({
-      p: e,
-      s: We(e, _),
+    cards = sortedMembers.map((sortedMember) => ({
+      member: sortedMember,
+      profile: computeCardProfile(sortedMember, recentMatches),
     })),
-    b = ee.find((e) => e.p.name === d);
+    selectedCard = cards.find((card) => card.member.name === selectedName);
   useEffect(() => {
-    if (!d) return;
-    let e = (e) => {
-      e.key === 'Escape' && f(null);
+    if (!selectedName) return;
+    let onKeyDown = (event) => {
+      event.key === 'Escape' && setSelectedName(null);
     };
-    window.addEventListener('keydown', e);
-    return () => window.removeEventListener('keydown', e);
-  }, [d]);
-  e.members.members.filter((e) => $(e.gamesPlayed) > 0).length;
-  let S = $(m.wins),
-    C = $(m.ties),
-    w = $(m.losses),
-    D = $(m.gamesPlayed),
-    te = _.map((e) => {
-      let t = e.clubs[70375];
-      return $(t.goals) > $(t.goalsAgainst)
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedName]);
+  data.members.members.filter((member) => toNumber(member.gamesPlayed) > 0)
+    .length;
+  let wins = toNumber(club.wins),
+    ties = toNumber(club.ties),
+    losses = toNumber(club.losses),
+    gamesPlayed = toNumber(club.gamesPlayed),
+    form = recentMatches.map((match) => {
+      let own = match.clubs[70375];
+      return toNumber(own.goals) > toNumber(own.goalsAgainst)
         ? 'V'
-        : $(t.goals) < $(t.goalsAgainst)
+        : toNumber(own.goals) < toNumber(own.goalsAgainst)
           ? 'S'
           : 'P';
     }),
-    k = [...v]
-      .filter((e) => $(e.gamesPlayed) > 0)
-      .sort((e, t) => $(t.goals) + $(t.assists) - $(e.goals) - $(e.assists)),
-    j = [...k].sort((e, t) => $(t.goals) - $(e.goals))[0],
-    M = [...k].sort((e, t) => $(t.assists) - $(e.assists))[0],
-    ie = [...k]
-      .filter((e) => $(e.gamesPlayed) >= 10)
-      .sort((e, t) => $(t.passSuccessRate) - $(e.passSuccessRate))[0],
-    N = _.slice()
+    activeMembers = [...sortedMembers]
+      .filter((sortedMember) => toNumber(sortedMember.gamesPlayed) > 0)
+      .sort(
+        (a, b) =>
+          toNumber(b.goals) +
+          toNumber(b.assists) -
+          toNumber(a.goals) -
+          toNumber(a.assists),
+      ),
+    topScorer = [...activeMembers].sort(
+      (a, b) => toNumber(b.goals) - toNumber(a.goals),
+    )[0],
+    topAssister = [...activeMembers].sort(
+      (a, b) => toNumber(b.assists) - toNumber(a.assists),
+    )[0],
+    topPasser = [...activeMembers]
+      .filter((activeMember) => toNumber(activeMember.gamesPlayed) >= 10)
+      .sort(
+        (a, b) => toNumber(b.passSuccessRate) - toNumber(a.passSuccessRate),
+      )[0],
+    recentGames = recentMatches
+      .slice()
       .reverse()
-      .map((e) => {
-        let t = e.clubs[70375];
+      .map((match) => {
+        let own = match.clubs[70375];
         return {
-          id: e.matchId,
-          for: $(t.goals),
-          against: $(t.goalsAgainst),
+          id: match.matchId,
+          for: toNumber(own.goals),
+          against: toNumber(own.goalsAgainst),
           name:
-            Object.entries(e.clubs).find(([e]) => e !== '70375')?.[1]?.details
-              ?.name || 'Avversario',
+            Object.entries(match.clubs).find(
+              ([clubId]) => clubId !== '70375',
+            )?.[1]?.details?.name || 'Avversario',
         };
       }),
-    ae = N.reduce((e, t) => e + t.for, 0),
-    P = N.reduce((e, t) => e + t.against, 0),
-    oe = Math.max(5, ...N.flatMap((e) => [e.for, e.against]));
+    goalsFor = recentGames.reduce(
+      (total, recentGame) => total + recentGame.for,
+      0,
+    ),
+    goalsAgainst = recentGames.reduce(
+      (total, recentGame) => total + recentGame.against,
+      0,
+    ),
+    maxGoals = Math.max(
+      5,
+      ...recentGames.flatMap((recentGame) => [
+        recentGame.for,
+        recentGame.against,
+      ]),
+    );
   return (
     <div className="site">
       <header className="nav">
@@ -3002,28 +3367,31 @@ function Ke() {
             <small>FC 27 / CLUB INTELLIGENCE</small>
           </span>
         </a>
-        <Le />
+        <SectionNav />
         <div className="status">
-          <i className={n === 'yes' ? 'active' : ''} />
-          {n === 'yes'
+          <i className={connection === 'yes' ? 'active' : ''} />
+          {connection === 'yes'
             ? 'EA collegata'
-            : n === 'partial'
+            : connection === 'partial'
               ? 'EA parziale'
-              : n === 'no'
+              : connection === 'no'
                 ? 'Ultimi dati salvati'
                 : 'Connessione a EA'}
         </div>
       </header>
       <main id="top">
-        <Fe members={e.members.members} matches={e.matchHistory || _} />
+        <DayAfter
+          members={data.members.members}
+          matches={data.matchHistory || recentMatches}
+        />
         <section className="content" id="panoramica">
           <div className="section-head">
             <div>
               <span className="overline">01 / PANORAMICA</span>
               <h2>Il tabellone.</h2>
             </div>
-            <button className="refresh" onClick={p} disabled={c}>
-              <RefreshCw size={16} className={c ? 'spin' : ''} />
+            <button className="refresh" onClick={refresh} disabled={refreshing}>
+              <RefreshCw size={16} className={refreshing ? 'spin' : ''} />
               {' Aggiorna dati'}
             </button>
           </div>
@@ -3032,15 +3400,15 @@ function Ke() {
               <span className="label">RECORD TOTALE</span>
               <div className="record-numbers">
                 <strong>
-                  <Be value={S} />
+                  <CountUp value={wins} />
                 </strong>
                 <i>—</i>
                 <strong>
-                  <Be value={C} />
+                  <CountUp value={ties} />
                 </strong>
                 <i>—</i>
                 <strong>
-                  <Be value={w} />
+                  <CountUp value={losses} />
                 </strong>
               </div>
               <div className="record-labels">
@@ -3051,26 +3419,26 @@ function Ke() {
               <div className="split">
                 <i
                   style={{
-                    width: `${(S / D) * 100}%`,
+                    width: `${(wins / gamesPlayed) * 100}%`,
                   }}
                 />
                 <i
                   style={{
-                    width: `${(C / D) * 100}%`,
+                    width: `${(ties / gamesPlayed) * 100}%`,
                   }}
                 />
                 <i
                   style={{
-                    width: `${(w / D) * 100}%`,
+                    width: `${(losses / gamesPlayed) * 100}%`,
                   }}
                 />
               </div>
               <p>
-                {Math.round((S / D) * 100)}
+                {Math.round((wins / gamesPlayed) * 100)}
                 {'% di vittorie su '}
-                {D}
+                {gamesPlayed}
                 {' partite. '}
-                {S > w
+                {wins > losses
                   ? 'Il bilancio è positivo; la difesa, però, lascia spazio al dramma.'
                   : 'La squadra ha ancora margine per cambiare il bilancio.'}
               </p>
@@ -3079,38 +3447,42 @@ function Ke() {
               <div>
                 <span>GOL FATTI</span>
                 <strong>
-                  <Be value={$(m.goals)} />
+                  <CountUp value={toNumber(club.goals)} />
                 </strong>
                 <small>
-                  {Re(m.goals, D)}
+                  {ratio(club.goals, gamesPlayed)}
                   {' / gara'}
                 </small>
               </div>
               <div>
                 <span>GOL SUBITI</span>
                 <strong>
-                  <Be value={$(m.goalsAgainst)} />
+                  <CountUp value={toNumber(club.goalsAgainst)} />
                 </strong>
                 <small>
-                  {Re(m.goalsAgainst, D)}
+                  {ratio(club.goalsAgainst, gamesPlayed)}
                   {' / gara'}
                 </small>
               </div>
               <div>
                 <span>DIFFERENZA RETI</span>
                 <strong className="lime">
-                  {$(m.goals) - $(m.goalsAgainst) > 0 ? '+' : ''}
-                  <Be value={$(m.goals) - $(m.goalsAgainst)} />
+                  {toNumber(club.goals) - toNumber(club.goalsAgainst) > 0
+                    ? '+'
+                    : ''}
+                  <CountUp
+                    value={toNumber(club.goals) - toNumber(club.goalsAgainst)}
+                  />
                 </strong>
                 <small>Gol fatti meno subiti</small>
               </div>
               <div>
                 <span>PROMOZIONI</span>
                 <strong>
-                  <Be value={$(m.promotions)} />
+                  <CountUp value={toNumber(club.promotions)} />
                 </strong>
                 <small>
-                  {m.relegations}
+                  {club.relegations}
                   {' retrocessioni'}
                 </small>
               </div>
@@ -3118,26 +3490,26 @@ function Ke() {
             <div className="form panel">
               <span className="label">
                 {'ULTIME '}
-                {_.length}
+                {recentMatches.length}
                 {' · CAMPIONATO'}
               </span>
               <div className="form-row">
-                {te.map((e, t) => (
-                  <span key={t} className={e}>
-                    {e}
+                {form.map((result, index) => (
+                  <span key={index} className={result}>
+                    {result}
                   </span>
                 ))}
               </div>
               <h3>
-                {te.filter((e) => e === 'V').length}
+                {form.filter((result) => result === 'V').length}
                 {' vittorie nelle ultime '}
-                {_.length}
+                {recentMatches.length}
               </h3>
               <p>
                 {
                   'EA espone le ultime cinque gare per modalità. Il record generale comprende '
                 }
-                {D}
+                {gamesPlayed}
                 {' partite.'}
               </p>
               <a href="#partite">
@@ -3151,25 +3523,30 @@ function Ke() {
             <div>
               <span>LETTURA RAPIDA</span>
               <strong>
-                {Re(m.goals, D)}
+                {ratio(club.goals, gamesPlayed)}
                 {' gol fatti e '}
-                {Re(m.goalsAgainst, D)}
+                {ratio(club.goalsAgainst, gamesPlayed)}
                 {' subiti a gara.'}
               </strong>
               <p>
-                {$(m.goalsAgainst) / D > 2
+                {toNumber(club.goalsAgainst) / gamesPlayed > 2
                   ? "L'attacco produce, ma la difesa concede spesso: c'è quasi sempre bisogno di segnare tanto."
                   : "Bilancio offensivo e difensivo letto sull'intera stagione."}
               </p>
             </div>
             <b>
-              {Math.round(($(m.goalsAgainst) / Math.max(1, $(m.goals))) * 100)}%
+              {Math.round(
+                (toNumber(club.goalsAgainst) /
+                  Math.max(1, toNumber(club.goals))) *
+                  100,
+              )}
+              %
             </b>
           </div>
           <details className="compact-appendix">
             <summary>La lente sui numeri · andamento e leader</summary>
             <section className="analysis" id="analisi">
-              <Ve>
+              <Reveal>
                 <div className="section-head">
                   <div>
                     <span className="overline">02 / LA SALA ANALISI</span>
@@ -3178,7 +3555,7 @@ function Ke() {
                       {
                         'Dati aggiornati da EA. Gli insight sulle gare recenti si riferiscono soltanto alle ultime '
                       }
-                      {N.length}
+                      {recentGames.length}
                       {' partite disponibili.'}
                     </p>
                   </div>
@@ -3187,24 +3564,24 @@ function Ke() {
                     {' MATCH INTELLIGENCE'}
                   </span>
                 </div>
-              </Ve>
+              </Reveal>
               <div className="analysis-grid">
-                <Ve className="analysis-card pulse-card">
+                <Reveal className="analysis-card pulse-card">
                   <div className="analysis-card-head">
                     <span>
                       {'IL PULSE DELLE ULTIME '}
-                      {N.length}
+                      {recentGames.length}
                     </span>
                     <TrendingUp size={18} />
                   </div>
                   <div className="pulse-totals">
                     <strong>
-                      {ae}
+                      {goalsFor}
                       <small>{' FATTI'}</small>
                     </strong>
                     <span>:</span>
                     <strong>
-                      {P}
+                      {goalsAgainst}
                       <small>{' SUBITI'}</small>
                     </strong>
                   </div>
@@ -3212,30 +3589,30 @@ function Ke() {
                     className="pulse-chart"
                     aria-label="Gol fatti e subiti nelle ultime partite, in ordine cronologico"
                   >
-                    {N.map((e, t) => (
-                      <div key={e.id} className="pulse-game">
+                    {recentGames.map((game, index) => (
+                      <div key={game.id} className="pulse-game">
                         <div className="pulse-bars">
                           <i
                             className="bar-for"
                             style={{
-                              height: `${Math.max(7, (e.for / oe) * 100)}%`,
-                              animationDelay: `${t * 90}ms`,
+                              height: `${Math.max(7, (game.for / maxGoals) * 100)}%`,
+                              animationDelay: `${index * 90}ms`,
                             }}
-                            title={`${e.for} gol fatti`}
+                            title={`${game.for} gol fatti`}
                           />
                           <i
                             className="bar-against"
                             style={{
-                              height: `${Math.max(7, (e.against / oe) * 100)}%`,
-                              animationDelay: `${t * 90 + 80}ms`,
+                              height: `${Math.max(7, (game.against / maxGoals) * 100)}%`,
+                              animationDelay: `${index * 90 + 80}ms`,
                             }}
-                            title={`${e.against} gol subiti`}
+                            title={`${game.against} gol subiti`}
                           />
                         </div>
                         <b>
-                          {e.for}–{e.against}
+                          {game.for}–{game.against}
                         </b>
-                        <span title={e.name}>{e.name}</span>
+                        <span title={game.name}>{game.name}</span>
                       </div>
                     ))}
                   </div>
@@ -3250,9 +3627,9 @@ function Ke() {
                     </span>
                     <small>DAL PIÙ VECCHIO AL PIÙ RECENTE →</small>
                   </div>
-                </Ve>
+                </Reveal>
               </div>
-              <Ve>
+              <Reveal>
                 <div className="signal-grid">
                   <div className="signal">
                     <span className="signal-icon">
@@ -3260,12 +3637,14 @@ function Ke() {
                     </span>
                     <div>
                       <span>FINALIZZATORE</span>
-                      <strong>{j?.name || '—'}</strong>
+                      <strong>{topScorer?.name || '—'}</strong>
                       <p>
-                        {j?.goals || 0}
+                        {topScorer?.goals || 0}
                         {' gol · '}
                         {Math.round(
-                          ($(j?.goals) / Math.max(1, $(m.goals))) * 100,
+                          (toNumber(topScorer?.goals) /
+                            Math.max(1, toNumber(club.goals))) *
+                            100,
                         )}
                         % dei gol del club. Quando segna lui, la contabilità
                         cambia.
@@ -3278,13 +3657,13 @@ function Ke() {
                     </span>
                     <div>
                       <span>UOMO ASSIST</span>
-                      <strong>{M?.name || '—'}</strong>
+                      <strong>{topAssister?.name || '—'}</strong>
                       <p>
-                        {M?.assists || 0}
+                        {topAssister?.assists || 0}
                         {' assist in '}
-                        {M?.gamesPlayed || 0}
+                        {topAssister?.gamesPlayed || 0}
                         {' gare · '}
-                        {Re(M?.assists, M?.gamesPlayed)}
+                        {ratio(topAssister?.assists, topAssister?.gamesPlayed)}
                         {' a partita.'}
                       </p>
                     </div>
@@ -3295,19 +3674,23 @@ function Ke() {
                     </span>
                     <div>
                       <span>PIÙ PRECISO NEI PASSAGGI</span>
-                      <strong>{ie?.name || '—'}</strong>
+                      <strong>{topPasser?.name || '—'}</strong>
                       <p>
-                        {ie?.passSuccessRate || 0}% di passaggi riusciti tra chi
-                        ha almeno 10 presenze. Campione minimo dichiarato.
+                        {topPasser?.passSuccessRate || 0}% di passaggi riusciti
+                        tra chi ha almeno 10 presenze. Campione minimo
+                        dichiarato.
                       </p>
                     </div>
                   </div>
                 </div>
-              </Ve>
+              </Reveal>
             </section>
           </details>
         </section>
-        <Tag_xe members={e.members.members} matches={e.matchHistory || _} />
+        <PerformanceGrades
+          members={data.members.members}
+          matches={data.matchHistory || recentMatches}
+        />
         <section className="content squad" id="rosa">
           <div className="section-head">
             <div>
@@ -3321,7 +3704,8 @@ function Ke() {
               </p>
             </div>
             <div className="count">
-              {String(v.length).padStart(2, '0')} <small>PROFILI EA</small>
+              {String(sortedMembers.length).padStart(2, '0')}{' '}
+              <small>PROFILI EA</small>
             </div>
           </div>
           <div className="leaderboard-head">
@@ -3329,45 +3713,47 @@ function Ke() {
             <span>GOL + ASSIST</span>
           </div>
           <div className="leader-list">
-            {ee.map(({ p: e, s: t }, n) => (
+            {cards.map(({ member, profile }, index) => (
               <button
-                key={e.name}
+                key={member.name}
                 className="leader-entry"
-                onClick={() => f(e.name)}
-                aria-label={`Posizione ${n + 1}, ${e.name}, ${$(e.goals) + $(e.assists)} gol più assist. Apri la pagella`}
+                onClick={() => setSelectedName(member.name)}
+                aria-label={`Posizione ${index + 1}, ${member.name}, ${toNumber(member.goals) + toNumber(member.assists)} gol più assist. Apri la pagella`}
               >
                 <span className="leader-entry-rank">
-                  #{String(n + 1).padStart(2, '0')}
+                  #{String(index + 1).padStart(2, '0')}
                 </span>
                 <span
-                  className={`leader-mini-card ${t.tier} ${t.hot ? 'on-fire' : ''}`}
+                  className={`leader-mini-card ${profile.tier} ${profile.hot ? 'on-fire' : ''}`}
                   aria-hidden="true"
                 >
-                  <span>{Ue(e)}</span>
+                  <span>{formatProOverall(member)}</span>
                 </span>
                 <span className="leader-entry-name">
-                  <strong>{e.name}</strong>
+                  <strong>{member.name}</strong>
                   <small>
-                    {t.label}
+                    {profile.label}
                     {' · '}
-                    {e.gamesPlayed}
+                    {member.gamesPlayed}
                     {' PRESENZE'}
-                    {t.basis === 'season' ? ' · INDICE STAGIONALE' : ''}
-                    {t.hot ? ' · ON FIRE' : ''}
+                    {profile.basis === 'season' ? ' · INDICE STAGIONALE' : ''}
+                    {profile.hot ? ' · ON FIRE' : ''}
                   </small>
                 </span>
                 <span className="leader-entry-breakdown">
                   <b>
-                    {e.goals}
+                    {member.goals}
                     {' G'}
                   </b>
                   <b>
-                    {e.assists}
+                    {member.assists}
                     {' A'}
                   </b>
                 </span>
                 <span className="leader-entry-total">
-                  <strong>{$(e.goals) + $(e.assists)}</strong>
+                  <strong>
+                    {toNumber(member.goals) + toNumber(member.assists)}
+                  </strong>
                   <small>G + A</small>
                 </span>
                 <ArrowUpRight className="leader-arrow" size={17} />
@@ -3383,66 +3769,78 @@ function Ke() {
             stagionali di tutti i ruoli; chi non ha presenze resta non
             classificato.
           </p>
-          {b && (
+          {selectedCard && (
             <div
               className="card-dialog-backdrop"
-              onMouseDown={(e) => {
-                e.target === e.currentTarget && f(null);
+              onMouseDown={(event) => {
+                event.target === event.currentTarget && setSelectedName(null);
               }}
             >
               <div
                 className="card-dialog"
                 role="dialog"
                 aria-modal="true"
-                aria-label={`Pagella di ${b.p.name}`}
+                aria-label={`Pagella di ${selectedCard.member.name}`}
               >
                 <button
                   className="dialog-close"
-                  onClick={() => f(null)}
+                  onClick={() => setSelectedName(null)}
                   aria-label="Chiudi la pagella"
                 >
                   ×
                 </button>
                 <div className="dialog-card">
-                  <Ge p={b.p} s={b.s} onClick={() => {}} />
+                  <CollectorCard
+                    member={selectedCard.member}
+                    profile={selectedCard.profile}
+                    onClick={() => {}}
+                  />
                 </div>
                 <div className="dialog-copy">
                   <span className="overline">
                     {'PAGELLA / '}
-                    {b.s.label}
+                    {selectedCard.profile.label}
                     {' / '}
-                    {b.s.tier.toUpperCase()}
+                    {selectedCard.profile.tier.toUpperCase()}
                   </span>
-                  <h3>{b.p.name}</h3>
+                  <h3>{selectedCard.member.name}</h3>
                   <div className="form-grade">
-                    <b>{b.s.basis === 'none' ? '—' : b.s.score}</b>
+                    <b>
+                      {selectedCard.profile.basis === 'none'
+                        ? '—'
+                        : selectedCard.profile.score}
+                    </b>
                     <span>
-                      {b.s.basis === 'season'
+                      {selectedCard.profile.basis === 'season'
                         ? 'INDICE STAGIONALE'
                         : 'INDICE DI FORMA'}
                       {' · '}
-                      {b.s.tier.toUpperCase()}
-                      {b.s.hot ? ' · ON FIRE' : ''}
+                      {selectedCard.profile.tier.toUpperCase()}
+                      {selectedCard.profile.hot ? ' · ON FIRE' : ''}
                       <small>
-                        {b.s.basis === 'season'
-                          ? `${b.p.gamesPlayed} presenze stagionali in tutti i ruoli; assente dalle cinque gare recenti disponibili.`
-                          : `${b.s.games} presenze nel reparto; ultime tre: media ${b.s.recentRating.toFixed(1)}, ${b.s.recentContrib} gol + assist.`}
+                        {selectedCard.profile.basis === 'season'
+                          ? `${selectedCard.member.gamesPlayed} presenze stagionali in tutti i ruoli; assente dalle cinque gare recenti disponibili.`
+                          : `${selectedCard.profile.games} presenze nel reparto; ultime tre: media ${selectedCard.profile.recentRating.toFixed(1)}, ${selectedCard.profile.recentContrib} gol + assist.`}
                       </small>
                     </span>
                   </div>
-                  <H p={b.p} players={v} recent={b.s} />
+                  <SeasonProfile
+                    member={selectedCard.member}
+                    players={sortedMembers}
+                    recent={selectedCard.profile}
+                  />
                   <small>
                     {
                       "L'indice di forma e il colore sono valutazioni del sito. Il numero grande sulla figurina è invece l'overall del Pro fornito da EA: "
                     }
-                    {Ue(b.p)}.
+                    {formatProOverall(selectedCard.member)}.
                   </small>
                 </div>
               </div>
             </div>
           )}
         </section>
-        <Tag_de matches={_} />
+        <MatchLab matches={recentMatches} />
         <details className="compact-appendix match-archive">
           <summary>Archivio rapido · tabellini di campionato</summary>
           <section className="content matches" id="partite">
@@ -3457,7 +3855,10 @@ function Ke() {
               </div>
               <a
                 className="source"
-                href={ze + '/match-history?clubId=70375&platform=common-gen5'}
+                href={
+                  EA_CLUBS_URL +
+                  '/match-history?clubId=70375&platform=common-gen5'
+                }
                 target="_blank"
                 rel="noreferrer"
               >
@@ -3466,69 +3867,81 @@ function Ke() {
               </a>
             </div>
             <div className="match-list">
-              {_.map((e, t) => {
-                let n = e.clubs[70375],
-                  r = Object.entries(e.clubs).find(([e]) => e !== '70375')?.[1],
-                  i = Object.values(e.players?.['70375'] || {}),
-                  a =
-                    $(n.goals) > $(n.goalsAgainst)
+              {recentMatches.map((match, matchIndex) => {
+                let own = match.clubs[70375],
+                  opponent = Object.entries(match.clubs).find(
+                    ([clubId]) => clubId !== '70375',
+                  )?.[1],
+                  players = Object.values(match.players?.['70375'] || {}),
+                  outcome =
+                    toNumber(own.goals) > toNumber(own.goalsAgainst)
                       ? 'VITTORIA'
-                      : $(n.goals) < $(n.goalsAgainst)
+                      : toNumber(own.goals) < toNumber(own.goalsAgainst)
                         ? 'SCONFITTA'
                         : 'PAREGGIO';
                 return (
-                  <details key={e.matchId} className="match">
+                  <details key={match.matchId} className="match">
                     <summary>
-                      <span className="match-index">0{t + 1}</span>
-                      <span className={'outcome ' + a}>{a}</span>
+                      <span className="match-index">0{matchIndex + 1}</span>
+                      <span className={'outcome ' + outcome}>{outcome}</span>
                       <strong>
                         {'BILLOCCHI CLUB '}
                         <b>
-                          {n.goals}
+                          {own.goals}
                           {' — '}
-                          {r?.goals}
+                          {opponent?.goals}
                         </b>{' '}
-                        {r?.details?.name || 'Avversario'}
+                        {opponent?.details?.name || 'Avversario'}
                       </strong>
                       <time>
-                        {new Date($(e.timestamp) * 1e3).toLocaleDateString(
-                          'it-IT',
-                          {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          },
-                        )}
+                        {new Date(
+                          toNumber(match.timestamp) * 1e3,
+                        ).toLocaleDateString('it-IT', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </time>
                       <ChevronDown size={18} />
                     </summary>
                     <div className="match-detail">
                       <div className="match-mini">
                         <span>
-                          <b>{i.reduce((e, t) => e + $(t.goals), 0)}</b>
+                          <b>
+                            {players.reduce(
+                              (total, player) => total + toNumber(player.goals),
+                              0,
+                            )}
+                          </b>
                           {' GOL DEI PRO'}
                         </span>
                         <span>
-                          <b>{i.reduce((e, t) => e + $(t.assists), 0)}</b>
+                          <b>
+                            {players.reduce(
+                              (total, player) =>
+                                total + toNumber(player.assists),
+                              0,
+                            )}
+                          </b>
                           {' ASSIST'}
                         </span>
                         <span>
-                          <b>{i.length}</b>
+                          <b>{players.length}</b>
                           {' PRO IN CAMPO'}
                         </span>
                       </div>
                       <div className="match-players">
-                        {i.map((e, t) => (
-                          <div key={t}>
-                            <strong>{e.playername}</strong>
-                            <span>{e.pos}</span>
+                        {players.map((player, playerIndex) => (
+                          <div key={playerIndex}>
+                            <strong>{player.playername}</strong>
+                            <span>{player.pos}</span>
                             <b>
-                              {e.goals}
+                              {player.goals}
                               {' G · '}
-                              {e.assists}
+                              {player.assists}
                               {' A'}
                             </b>
-                            <em>{e.rating}</em>
+                            <em>{player.rating}</em>
                           </div>
                         ))}
                       </div>
@@ -3547,26 +3960,26 @@ function Ke() {
           Dati EA SPORTS FC Clubs. Sincronizzazione salvata ogni settimana;
           verifica sul sito ogni 60 secondi durante la visita.
           <br />
-          {n === 'yes' && o
-            ? `Lettura EA completa: ${new Date(o).toLocaleString('it-IT')}`
-            : n === 'partial' && o
-              ? `Lettura parziale: ${new Date(o).toLocaleString('it-IT')}. Aggiornati: ${i
+          {connection === 'yes' && lastSync
+            ? `Lettura EA completa: ${new Date(lastSync).toLocaleString('it-IT')}`
+            : connection === 'partial' && lastSync
+              ? `Lettura parziale: ${new Date(lastSync).toLocaleString('it-IT')}. Aggiornati: ${freshKeys
                   .map(
-                    (e) =>
+                    (key) =>
                       ({
                         club: 'club',
                         members: 'giocatori',
                         matches: 'partite',
                         membersCore: 'gol, assist e presenze dei giocatori',
-                      })[e] || e,
+                      })[key] || key,
                   )
                   .join(
                     ', ',
-                  )}; gli altri dati restano alla rilevazione del ${new Date(e.capturedAt).toLocaleString('it-IT')}.`
-              : `Ultima rilevazione EA: ${new Date(e.capturedAt).toLocaleString('it-IT')}. Il server EA limita la connessione diretta; i dati vengono sincronizzati periodicamente.`}
+                  )}; gli altri dati restano alla rilevazione del ${new Date(data.capturedAt).toLocaleString('it-IT')}.`
+              : `Ultima rilevazione EA: ${new Date(data.capturedAt).toLocaleString('it-IT')}. Il server EA limita la connessione diretta; i dati vengono sincronizzati periodicamente.`}
         </p>
         <a
-          href={ze + '/overview?clubId=70375&platform=common-gen5'}
+          href={EA_CLUBS_URL + '/overview?clubId=70375&platform=common-gen5'}
           target="_blank"
           rel="noreferrer"
         >
@@ -3577,4 +3990,4 @@ function Ke() {
     </div>
   );
 }
-export { Ke as default };
+export { App as default };
