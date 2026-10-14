@@ -200,13 +200,11 @@ export function DayAfter({ members, matches, data }) {
           Ogni edizione usa le partite conservate della serata selezionata; le
           sessioni dopo mezzanotte e prima delle 06:00 italiane appartengono
           alla sera precedente. Giudizi e note sono commenti originali del
-          club, scritti sui dati EA: l’elogio è riservato a chi supera l’8 di
-          media stagionale e cita sempre un limite; sotto il 6.5 la bocciatura
-          è netta. La migliore media della serata segue la media EA più alta
-          con almeno metà delle gare e voti in tutte le proprie presenze; senza
-          candidati, considera chi ha più presenze e voti completi. Le medie
-          identiche condividono il riconoscimento, che sotto l’8 non è un
-          elogio. I voti non sono corretti per ruolo o minuti. Il romanzo usa i
+          club, scritti sui dati EA. Il migliore della serata segue la media EA
+          più alta con almeno metà delle gare e voti in tutte le proprie
+          presenze; senza candidati, considera chi ha più presenze e voti
+          completi. Le medie identiche condividono il riconoscimento. I voti
+          non sono corretti per ruolo o minuti. Il romanzo usa i
           totali stagionali EA; il grafico recente confronta soltanto lo stesso
           reparto, sull’archivio disponibile. I tiri senza gol non identificano
           da soli errori di mira o occasioni mancate. Le svolte descrivono

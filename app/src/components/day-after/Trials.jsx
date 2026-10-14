@@ -41,7 +41,7 @@ function TrialCard({ index, isCoverPro, nightQuotes, player, trial }) {
       <div className="paper-case-body">
         {trial.praise && (
           <div className="paper-praise">
-            <span>L’ELOGIO</span>
+            <span>IN SUO FAVORE</span>
             <p>{trial.praise}</p>
           </div>
         )}
@@ -107,13 +107,12 @@ export function Trials({ nightQuotes, nightStats, trials }) {
           <h3>
             Tutti alla sbarra.
             <br />
-            <em>Sconti solo oltre l’8.</em>
+            <em>Verdetti con i numeri in mano.</em>
           </h3>
         </div>
         <p>
-          Accusa, prove e verdetto per tutti quelli scesi in campo. L’elogio
-          si merita sopra l’8 di media stagionale, e con un limite sempre
-          indicato; sotto il 6.5 si viene bocciati. Le cifre sono di EA.
+          Accusa, prove e verdetto per tutti quelli scesi in campo. Le cifre
+          sono di EA.
         </p>
       </div>
       <div className="paper-trial-grid">

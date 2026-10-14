@@ -154,18 +154,18 @@ export function CurvePanel({
                 ? 'Tiri senza gol: spreco.'
                 : ratingDelta !== null && ratingDelta < 0
                   ? 'Ultima gara sotto il proprio livello.'
-                  : 'Nessun difetto netto: non è un elogio.'
+                  : 'Nessun difetto netto, ma niente di più.'
             : 'Nessuna presenza da giudicare.'}
         </h3>
         <p>
           {formSummary.games
             ? formSummary.attempts >= 10 && toNumber(formSummary.pass) < passMin
-              ? `${formSummary.attempts - formSummary.passes} passaggi non riusciti su ${formSummary.attempts}: ${formSummary.pass}% contro una soglia del ${passMin}% per il reparto. Il possesso regalato pesa più del voto.`
+              ? `${formSummary.attempts - formSummary.passes} passaggi non riusciti su ${formSummary.attempts}: ${formSummary.pass}% di precisione. Il possesso regalato pesa più del voto.`
               : formSummary.shots >= 5 && formSummary.goals === 0
                 ? `${formSummary.shots} tiri senza un gol nelle gare osservate: conclusioni da selezionare meglio. Dai dati non si deduce la qualità delle occasioni.`
                 : ratingDelta !== null && ratingDelta < 0
                   ? `Ultima gara ${Math.abs(ratingDelta).toFixed(1)} punti sotto la media delle precedenti (${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze): un calo da spiegare.`
-                  : `${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze nel reparto: nessun difetto netto nei dati disponibili${toNumber(formSummary.rating) > 8 ? '' : ', ma sotto l’8 non c’è elogio'}.`
+                  : `${formatNumber(formSummary.rating, 1)} di media EA in ${formSummary.games} presenze nel reparto: nessun difetto netto nei dati disponibili.`
             : 'Nessuna presenza consultabile.'}
         </p>
       </div>

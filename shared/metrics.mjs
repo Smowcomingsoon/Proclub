@@ -96,10 +96,19 @@ function clubMatches(history, clubId) {
   return [...history].sort((a, b) => a.timestamp - b.timestamp).map(m => {
     const c = m.clubs?.[clubId] || {};
     const gf = num(c.goals), ga = num(c.goalsAgainst);
+    const rows = Object.values(m.players?.[clubId] || {});
+    const status = {};
+    rows.forEach(p => {
+      const gt = num(p.gameTime), sp = num(p.secondsPlayed);
+      const minutes = gt > 0 ? Math.min(90, Math.round(90 * sp / gt)) : 90;
+      status[p.playername] = num(p.redcards) > 0 ? 'red' : minutes >= 45 ? 'full' : 'part';
+    });
     return {matchId: String(m.matchId), timestamp: m.timestamp, gf, ga, result: gf > ga ? 'V' : gf < ga ? 'S' : 'P',
-      names: Object.values(m.players?.[clubId] || {}).map(p => p.playername)};
+      names: rows.map(p => p.playername), status};
   });
 }
+
+export const MIN_ONOFF = 10;
 
 export function reliabilityFor(games) {
   return games >= 25 ? 'solida' : games >= 10 ? 'discreta' : games >= 3 ? 'ridotta' : 'insufficiente';
@@ -124,7 +133,7 @@ export function computeMetrics(member, appearances, ctx = {}) {
     position: member.favoritePosition || '', proPos, proPosLabel: PRO_POS_LABEL[proPos] || null,
     playedPos, role, roleLabel: info.label, roleGroup: info.group, family: info.family,
     roleInferred: !playedPos, roleMismatch: !!(playedPos && member.favoritePosition && playedPos !== member.favoritePosition),
-    reliability: reliabilityFor(g),
+    reliability: reliabilityFor(g), nOff: 0,
     presenceRate: ctx.clubGames ? pct(g, ctx.clubGames) : null,
     goalsPerGame: per(goals, g), assistsPerGame: per(assists, g), gaPerGame: per(goals + assists, g),
     assistGoalRatio: goals ? assists / goals : null,
@@ -188,12 +197,24 @@ export function computeMetrics(member, appearances, ctx = {}) {
   });
   m.formVsSeason = m.form5 != null && rating ? m.form5 - rating : null;
   // on/off: club con e senza il Pro (stessa finestra di partite)
+  // Confronto con/senza: solo con campione sufficiente (>= MIN_ONOFF gare per gruppo, almeno 45' e senza
+  // espulsione del Pro per il gruppo "con"; gare con espulsione o spezzoni escluse), scarto di almeno 0.5 punti
+  // a gara e coerente con i gol subiti. Altrimenti nessun dato: niente testi, niente numeri.
+  m.nOff = 0; m.concededPerGameOff = null; m.pointsPerGameOff = null; m.onOffExcluded = a.filter(x => x.red > 0 || x.minutes < 45).length;
   if (ctx.matches) {
-    const off = ctx.matches.filter(x => !a.some(y => y.matchId === x.matchId));
-    m.nOff = off.length;
-    m.concededPerGameOff = off.length ? mean(off.map(x => x.ga)) : null;
-    m.pointsPerGameOff = off.length ? mean(off.map(x => pts(x.result))) : null;
-    m.cleanSheetGamesOff = off.filter(x => x.ga === 0).length;
+    const playedIds = new Set(a.map(x => x.matchId));
+    const onIds = new Set(full.filter(x => !x.red).map(x => x.matchId));
+    const on = ctx.matches.filter(x => onIds.has(x.matchId));
+    const off = ctx.matches.filter(x => !playedIds.has(x.matchId));
+    if (on.length >= MIN_ONOFF && off.length >= MIN_ONOFF) {
+      const ppgOn = mean(on.map(x => pts(x.result))), ppgOff = mean(off.map(x => pts(x.result)));
+      const gaOn = mean(on.map(x => x.ga)), gaOff = mean(off.map(x => x.ga));
+      const d = ppgOn - ppgOff;
+      if (Math.abs(d) >= 0.5 && (d > 0 ? gaOn < gaOff : gaOn > gaOff)) {
+        Object.assign(m, {nOn: on.length, nOff: off.length, pointsPerGame: ppgOn, pointsPerGameOff: ppgOff,
+          concededPerGameOn: gaOn, concededPerGameOff: gaOff, cleanSheetGamesOff: off.filter(x => x.ga === 0).length});
+      }
+    }
   }
   let streak = 0;
   for (let i = a.length - 1; i >= 0 && !a[i].goals && !a[i].assists; i--) streak++;
@@ -281,14 +302,19 @@ export function analyzeClub(data, clubId = CLUB_ID, precomputed) {
   const pairs = [];
   for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
     const A = names[i], B = names[j];
-    const together = ms.filter(x => x.names.includes(A) && x.names.includes(B));
+    // insieme = entrambi almeno 45' e nessuno espulso; senza la coppia = almeno uno dei due assente;
+    // gare con spezzoni o espulsioni escluse da entrambi i gruppi.
+    const together = ms.filter(x => x.status[A] === 'full' && x.status[B] === 'full');
     if (together.length < 4) continue;
-    const rest = ms.filter(x => !(x.names.includes(A) && x.names.includes(B)));
+    const rest = ms.filter(x => !x.status[A] || !x.status[B]);
+    const ppg = mean(together.map(x => pts(x.result))), gaPG = mean(together.map(x => x.ga));
+    const ppgR = rest.length ? mean(rest.map(x => pts(x.result))) : null, gaR = rest.length ? mean(rest.map(x => x.ga)) : null;
+    const valid = together.length >= MIN_ONOFF && rest.length >= MIN_ONOFF && Math.abs(ppg - ppgR) >= 0.5 && (ppg > ppgR ? gaPG < gaR : gaPG > gaR);
     pairs.push({
       a: A, b: B, n: together.length, w: together.filter(x => x.result === 'V').length, d: together.filter(x => x.result === 'P').length,
       l: together.filter(x => x.result === 'S').length,
-      ppg: mean(together.map(x => pts(x.result))), gfPerGame: mean(together.map(x => x.gf)), gaPerGame: mean(together.map(x => x.ga)),
-      ppgRest: rest.length >= 3 ? mean(rest.map(x => pts(x.result))) : null, nRest: rest.length,
+      ppg, gfPerGame: mean(together.map(x => x.gf)), gaPerGame: gaPG,
+      ppgRest: valid ? ppgR : null, gaRest: valid ? gaR : null, nRest: rest.length,
     });
   }
   pairs.forEach(p => { p.delta = p.ppgRest != null ? p.ppg - p.ppgRest : null; });
@@ -327,8 +353,8 @@ export function analyzeClub(data, clubId = CLUB_ID, precomputed) {
   if (n && missingFamilies.length) lines.push(`Nelle ${n} gare disponibili nessun Pro è schierato come ${missingFamilies.map(f => f === 'dif' ? 'difensore' : 'portiere').join(' né come ')} (campo pos): la fase difensiva è tutta sulle spalle di centrocampisti e punta.`);
   if (weakestUnit) lines.push(`Reparto con la media più bassa: ${dif(weakestUnit.family)} (${weakestUnit.rating.toFixed(2)} di media pesata sulle presenze).`);
   if (weakestPlayer) lines.push(`Anello debole tra i titolari (≥8 presenze): ${weakestPlayer.name}, media ${weakestPlayer.rating.toFixed(1)}.`);
-  if (bestPairs[0]) lines.push(`Coppia migliore: ${bestPairs[0].a} + ${bestPairs[0].b}, ${bestPairs[0].n} gare insieme, ${bestPairs[0].ppg.toFixed(2)} punti a gara contro ${bestPairs[0].ppgRest.toFixed(2)} quando non giocano insieme.`);
-  if (worstPairs[0]) lines.push(`Coppia che frena: ${worstPairs[0].a} + ${worstPairs[0].b}, ${worstPairs[0].n} gare insieme a ${worstPairs[0].ppg.toFixed(2)} punti a gara contro ${worstPairs[0].ppgRest.toFixed(2)} senza la coppia.`);
+  if (bestPairs[0]) lines.push(`Con ${bestPairs[0].a} e ${bestPairs[0].b} insieme il club ha totalizzato ${bestPairs[0].ppg.toFixed(2)} punti a gara in ${bestPairs[0].n} gare, ${bestPairs[0].ppgRest.toFixed(2)} nelle ${bestPairs[0].nRest} senza la coppia.`);
+  if (worstPairs[0]) lines.push(`Con ${worstPairs[0].a} e ${worstPairs[0].b} insieme il club ha totalizzato ${worstPairs[0].ppg.toFixed(2)} punti a gara in ${worstPairs[0].n} gare, ${worstPairs[0].ppgRest.toFixed(2)} nelle ${worstPairs[0].nRest} senza la coppia.`);
   if (dependence && dependence.share != null) lines.push(`Dipendenza dal capocannoniere: ${dependence.name} ha il ${Math.round(dependence.share)}% dei gol stagionali del club (${dependence.goals} su ${season.gf}).`);
   if (streaks.winning >= 3) lines.push(`Serie aperta: ${streaks.winning} vittorie consecutive.`);
   else if (streaks.unbeaten >= 4) lines.push(`Serie aperta: ${streaks.unbeaten} gare senza sconfitte.`);
@@ -340,7 +366,7 @@ export function analyzeClub(data, clubId = CLUB_ID, precomputed) {
     'Campi cleansheets* sempre 0 anche nelle gare a rete inviolata: le porte inviolate sono ricavate dai gol subiti del club.',
     'realtimegame ha valori incoerenti tra gare: i minuti sono ricavati da secondsPlayed / gameTime.',
     'Precisione passaggi stagionale arrotondata all\'intero da EA: i passaggi tentati stagionali sono una stima (passesMade / %).',
-    'Le differenze con/senza un Pro o con/senza una coppia sono correlazioni su campioni piccoli, non cause.',
+    'I confronti con/senza un Pro o una coppia compaiono solo con almeno 10 gare per gruppo (minimo 45\', gare con espulsioni escluse) e sono correlazioni, non cause.',
   ];
   return {clubId, record, season, streaks, pairs, bestPairs, worstPairs, units: unitList, weakestUnit, weakestPlayer, missingFamilies, dependence, lines, dataLimits, players};
 }

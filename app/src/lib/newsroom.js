@@ -60,8 +60,8 @@ export function buildTurningPoints(games, ctx = {}) {
 /** Titolo del fascicolo, dal giudizio del motore e dalla media stagionale (non dai gol). */
 export function buildTrialTitle(verdict, metrics) {
   const byTier = {
-    elite: 'sopra l’8, con riserva.',
-    buono: 'buono, non da elogio.',
+    elite: 'livello alto, con riserva.',
+    buono: 'buono, ma non basta.',
     medio: 'utile, mai decisivo.',
     rimandato: 'rimandato dai numeri.',
     bocciato: 'bocciato dai numeri.',
@@ -136,7 +136,7 @@ export function buildTrial(
               'Le cifre lo difendono. Il contratto da fenomeno resta da rinnovare alla prossima gara.',
               'Per questa volta il tribunale resta senza munizioni. Il parcheggio dello stadio conserva il vecchio nome.',
               'Nessuna criticità evidente da inchiodare ai numeri. La prossima partita riapre comunque il fascicolo.',
-              'Il tabellino non offre un bersaglio serio. Si prenda l’applauso, senza ordinare il busto in marmo.',
+              'Il tabellino non offre un bersaglio serio. Nessun difetto netto nei numeri.',
               'Oggi niente condanna statistica. Il posto nell’Olimpo si conferma col prossimo pallone.',
             ])),
             (proof = `Media EA ${formatRating(player.rating)}, ${player.games} presenze, ${player.goals} gol e ${player.assists} assist.`),
@@ -254,7 +254,7 @@ export function buildShareText({ night, nightStats, cover, trials }) {
   const verdicts = trials
     .map(
       ({ player, trial }) =>
-        `\n${player.name} · ${formatRating(player.rating)} EA\n${trial.praise ? `Elogio: ${trial.praise}\n` : ''}Accusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
+        `\n${player.name} · ${formatRating(player.rating)} EA\n${trial.praise ? `A favore: ${trial.praise}\n` : ''}Accusa: ${trial.charge}\nProva: ${trial.proof}\nVerdetto: ${trial.verdict}`,
     )
     .join('\n');
   return `BILLOCCHI · IL GIORNO DOPO\nSerata del ${formatLongDate(night.day)}\n${cover.title}\n${cover.deck}\n${cover.closing ? cover.closing + '\n' : ''}${night.games.length} gare: ${nightStats.wins}V ${nightStats.draws}P ${nightStats.losses}S · ${nightStats.goals} gol fatti, ${nightStats.against} subiti.\n${bestOfNight}${verdicts}\nhttps://billocchi-club.kr3n.chatgpt.site/`;
