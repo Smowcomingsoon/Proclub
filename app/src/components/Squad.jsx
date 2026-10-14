@@ -2,6 +2,7 @@ import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { computeCardProfile } from '../lib/card-profile.js';
 import { formatProOverall } from '../lib/format.js';
+import { playerHref } from '../lib/route.js';
 import { toNumber } from '../lib/stats.js';
 import { CollectorCard } from './CollectorCard.jsx';
 import { SeasonProfile } from './SeasonProfile.jsx';
@@ -119,6 +120,12 @@ function CardDialog({ data, selectedCard, members, setSelectedName }) {
             recent={selectedCard.profile}
             data={data}
           />
+          <a
+            className="pg-link pg-link-dialog"
+            href={playerHref(selectedCard.member.name)}
+          >
+            Apri la pagina del giocatore
+          </a>
           <small>
             {
               "L'indice di forma e il colore sono valutazioni del sito. Il numero grande sulla figurina è invece l'overall del Pro fornito da EA: "

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { STATS_HREF } from '../lib/route.js';
 
 const SECTIONS = [
   {
@@ -31,14 +32,25 @@ const SECTIONS = [
   },
 ];
 
+/** Viste a pagina intera (routing su hash): voci accanto alle sezioni. */
+const PAGES = [
+  {
+    id: 'statistiche',
+    label: 'Statistiche',
+    href: STATS_HREF,
+    view: 'stats',
+  },
+];
+
 /** Navigazione tra le sezioni: evidenzia quella visibile, scroll morbido e fade-in allo scroll. */
-export function SectionNav() {
+export function SectionNav({ view = 'home' }) {
   const [activeId, setActiveId] = useState('giorno-dopo');
   const navRef = useRef(null);
   useEffect(() => {
     let frame = 0;
     const update = () => {
       frame = 0;
+      if (view !== 'home') return;
       const offset =
         (navRef.current?.closest('header')?.getBoundingClientRect().bottom ||
           100) + 85;
@@ -93,10 +105,13 @@ export function SectionNav() {
     });
     window.addEventListener('resize', onScroll);
     update();
-    location.hash && goToHash(location.hash);
-    const animatedSections = document.querySelectorAll(
-      'main > section:not(.day-after), .paper-cover, .paper-results, .paper-turning, .paper-trials, .paper-season',
-    );
+    view === 'home' && location.hash && goToHash(location.hash);
+    const animatedSections =
+      view === 'home'
+        ? document.querySelectorAll(
+            'main > section:not(.day-after), .paper-cover, .paper-results, .paper-turning, .paper-trials, .paper-season',
+          )
+        : [];
     const observer = window.matchMedia('(prefers-reduced-motion: reduce)')
       .matches
       ? null
@@ -127,10 +142,12 @@ export function SectionNav() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
     };
-  }, []);
+  }, [view]);
+  const currentId =
+    view === 'home' ? activeId : view === 'stats' ? 'statistiche' : null;
   useEffect(() => {
     const nav = navRef.current;
-    const link = nav?.querySelector(`a[href="#${activeId}"]`);
+    const link = nav?.querySelector('a[aria-current]');
     if (!nav || !link) return;
     const linkLeft =
       link.getBoundingClientRect().left -
@@ -144,7 +161,7 @@ export function SectionNav() {
           ? 'auto'
           : 'smooth',
       });
-  }, [activeId]);
+  }, [currentId]);
   return (
     <nav
       ref={navRef}
@@ -155,11 +172,22 @@ export function SectionNav() {
         <a
           key={section.id}
           href={`#${section.id}`}
-          className={activeId === section.id ? 'is-active' : ''}
-          aria-current={activeId === section.id ? 'location' : undefined}
+          className={currentId === section.id ? 'is-active' : ''}
+          aria-current={currentId === section.id ? 'location' : undefined}
         >
           <span className="nav-dot" aria-hidden="true" />
           {section.label}
+        </a>
+      ))}
+      {PAGES.map((page) => (
+        <a
+          key={page.id}
+          href={page.href}
+          className={currentId === page.id ? 'is-active' : ''}
+          aria-current={currentId === page.id ? 'page' : undefined}
+        >
+          <span className="nav-dot" aria-hidden="true" />
+          {page.label}
         </a>
       ))}
     </nav>
