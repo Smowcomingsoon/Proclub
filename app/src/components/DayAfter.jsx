@@ -5,10 +5,13 @@ import {
   buildCover,
   buildRoleTrend,
   buildShareText,
+  buildTrialTitle,
   buildTrials,
   buildTurningPoints,
 } from '../lib/newsroom.js';
 import { buildCoachComments } from '../lib/coach.js';
+import { getEditorialContext } from '../lib/editorial-ctx.js';
+import { notebookEditorial, verdictFor } from '../../../shared/editorial.mjs';
 import { buildSeasonProfile } from '../lib/season-profile.js';
 import { CoverStory } from './day-after/CoverStory.jsx';
 import { EditionBar } from './day-after/EditionBar.jsx';
@@ -25,6 +28,7 @@ import { TurningPoints } from './day-after/TurningPoints.jsx';
  */
 export function DayAfter({ members, matches, data }) {
   const coach = useMemo(() => buildCoachComments(data), [data]);
+  const editorial = useMemo(() => getEditorialContext(data), [data]);
   const nights = useMemo(() => groupByNight(matches), [matches]);
   const [nightChoice, setNightChoice] = useState('');
   const [protagonistChoice, setProtagonistChoice] = useState('');
@@ -43,10 +47,17 @@ export function DayAfter({ members, matches, data }) {
             player,
             trial: {
               ...trial,
+              title: buildTrialTitle(
+                verdict,
+                editorial.metricsByName.get(player.name.toLowerCase()),
+              ),
               praise: verdict.praise,
               charge: verdict.charge,
               proof: verdict.proof.join(' · '),
-              verdict: verdict.verdict,
+              verdict: verdictFor(
+                editorial.metricsByName.get(player.name.toLowerCase()),
+                verdict,
+              ),
               coachNote: verdict.coachNote,
             },
           }
@@ -54,11 +65,20 @@ export function DayAfter({ members, matches, data }) {
     },
   );
   const cover = buildCover(
-    nightStats.players,
-    nightStats.winners,
+    nightStats,
+    selectedNight?.games.length || 0,
     selectedNight?.day,
+    editorial,
   );
-  const turningPoints = buildTurningPoints(selectedNight?.games || []);
+  const turningPoints = buildTurningPoints(selectedNight?.games || [], editorial);
+  const notebookText = notebookEditorial({
+    players: nightStats.players,
+    metricsByName: editorial.metricsByName,
+    record: {
+      games: selectedNight?.games.length || 0,
+      against: nightStats.against,
+    },
+  });
   const coverPlayer =
     nightStats.winners[0] ||
     nightStats.players.find((player) => player.name === cover.name);
@@ -77,16 +97,24 @@ export function DayAfter({ members, matches, data }) {
     ? buildRoleTrend(protagonist.name, matches)
     : null;
   const seasonProfile = protagonist
-    ? buildSeasonProfile(protagonist, members, {
-        games: 0,
-        label: '',
-        rating: 0,
-        goals: 0,
-        assists: 0,
-        passPct: 0,
-        passAttempts: 0,
-        tackles: 0,
-      })
+    ? buildSeasonProfile(
+        protagonist,
+        members,
+        {
+          games: 0,
+          label: '',
+          rating: 0,
+          goals: 0,
+          assists: 0,
+          passPct: 0,
+          passAttempts: 0,
+          tackles: 0,
+        },
+        {
+          metrics: editorial.metricsByName.get(protagonist.name.toLowerCase()),
+          club: editorial.club,
+        },
+      )
     : null;
   const shareText = buildShareText({
     night: selectedNight,
@@ -102,12 +130,6 @@ export function DayAfter({ members, matches, data }) {
       setCopyState('manual');
     }
   }
-  const topScorer = [...nightStats.players].sort(
-    (a, b) => b.goals - a.goals,
-  )[0];
-  const topAssister = [...nightStats.players].sort(
-    (a, b) => b.assists - a.assists,
-  )[0];
   return (
     <section className="day-after" id="giorno-dopo">
       <EditionBar
@@ -127,7 +149,6 @@ export function DayAfter({ members, matches, data }) {
         <>
           <CoverStory
             cover={cover}
-            coverPlayer={coverPlayer}
             nightStats={nightStats}
             selectedNight={selectedNight}
           />
@@ -141,9 +162,7 @@ export function DayAfter({ members, matches, data }) {
           <Notebook
             copyEdition={copyEdition}
             copyState={copyState}
-            nightStats={nightStats}
-            topAssister={topAssister}
-            topScorer={topScorer}
+            text={notebookText}
           />
           {copyState === 'manual' && (
             <label className="paper-manual-copy">
@@ -180,11 +199,14 @@ export function DayAfter({ members, matches, data }) {
         <p>
           Ogni edizione usa le partite conservate della serata selezionata; le
           sessioni dopo mezzanotte e prima delle 06:00 italiane appartengono
-          alla sera precedente. Elogi e battute sono commenti originali del
-          club. Il premio segue la media EA più alta con almeno metà delle gare
-          e voti in tutte le proprie presenze; senza candidati, considera chi ha
-          più presenze e voti completi. Le medie identiche condividono il
-          premio. I voti non sono corretti per ruolo o minuti. Il romanzo usa i
+          alla sera precedente. Giudizi e note sono commenti originali del
+          club, scritti sui dati EA: l’elogio è riservato a chi supera l’8 di
+          media stagionale e cita sempre un limite; sotto il 6.5 la bocciatura
+          è netta. La migliore media della serata segue la media EA più alta
+          con almeno metà delle gare e voti in tutte le proprie presenze; senza
+          candidati, considera chi ha più presenze e voti completi. Le medie
+          identiche condividono il riconoscimento, che sotto l’8 non è un
+          elogio. I voti non sono corretti per ruolo o minuti. Il romanzo usa i
           totali stagionali EA; il grafico recente confronta soltanto lo stesso
           reparto, sull’archivio disponibile. I tiri senza gol non identificano
           da soli errori di mira o occasioni mancate. Le svolte descrivono

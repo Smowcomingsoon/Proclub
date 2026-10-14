@@ -5,16 +5,18 @@ import {
   Target,
   TrendingUp,
 } from 'lucide-react';
+import { signalsEditorial } from '../../../shared/editorial.mjs';
 import { CLUB_ID } from '../lib/constants.js';
+import { getEditorialContext } from '../lib/editorial-ctx.js';
 import { getOpponentName } from '../lib/matches.js';
-import { ratio, toNumber } from '../lib/stats.js';
+import { toNumber } from '../lib/stats.js';
 import { Reveal } from './Reveal.jsx';
 
 /**
  * "Sala analisi": andamento delle ultime gare e leader del club.
  * `members` è la rosa già ordinata per gol + assist, `matches` le ultime gare EA.
  */
-export function AnalysisRoom({ club, members, matches }) {
+export function AnalysisRoom({ club, data, members, matches }) {
   const activeMembers = members
     .filter((member) => toNumber(member.gamesPlayed) > 0)
     .sort(
@@ -35,6 +37,11 @@ export function AnalysisRoom({ club, members, matches }) {
     .sort(
       (a, b) => toNumber(b.passSuccessRate) - toNumber(a.passSuccessRate),
     )[0];
+  const signals = signalsEditorial(getEditorialContext(data).club, {
+    scorer: topScorer?.name,
+    assister: topAssister?.name,
+    passer: topPasser?.name,
+  });
   // Dalla gara più vecchia alla più recente.
   const recentGames = matches
     .slice()
@@ -157,16 +164,7 @@ export function AnalysisRoom({ club, members, matches }) {
             <div>
               <span>FINALIZZATORE</span>
               <strong>{topScorer?.name || '—'}</strong>
-              <p>
-                {topScorer?.goals || 0}
-                {' gol · '}
-                {Math.round(
-                  (toNumber(topScorer?.goals) /
-                    Math.max(1, toNumber(club.goals))) *
-                    100,
-                )}
-                % dei gol del club. Quando segna lui, la contabilità cambia.
-              </p>
+              <p>{signals.scorer}</p>
             </div>
           </div>
           <div className="signal">
@@ -176,14 +174,7 @@ export function AnalysisRoom({ club, members, matches }) {
             <div>
               <span>UOMO ASSIST</span>
               <strong>{topAssister?.name || '—'}</strong>
-              <p>
-                {topAssister?.assists || 0}
-                {' assist in '}
-                {topAssister?.gamesPlayed || 0}
-                {' gare · '}
-                {ratio(topAssister?.assists, topAssister?.gamesPlayed)}
-                {' a partita.'}
-              </p>
+              <p>{signals.assister}</p>
             </div>
           </div>
           <div className="signal">
@@ -193,10 +184,7 @@ export function AnalysisRoom({ club, members, matches }) {
             <div>
               <span>PIÙ PRECISO NEI PASSAGGI</span>
               <strong>{topPasser?.name || '—'}</strong>
-              <p>
-                {topPasser?.passSuccessRate || 0}% di passaggi riusciti tra chi
-                ha almeno 10 presenze. Campione minimo dichiarato.
-              </p>
+              <p>{signals.passer}</p>
             </div>
           </div>
         </div>

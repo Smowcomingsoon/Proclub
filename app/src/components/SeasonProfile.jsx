@@ -1,10 +1,22 @@
 import { AdaniComment } from './AdaniComment.jsx';
 import { assignQuotes, toQuotePlayer } from '../lib/adani-quotes.js';
+import { getEditorialContext } from '../lib/editorial-ctx.js';
 import { buildSeasonProfile } from '../lib/season-profile.js';
 
 /** Ritratto della stagione di un Pro dentro la finestra della figurina. */
-export function SeasonProfile({ member, players, recent }) {
-  const profile = buildSeasonProfile(member, players, recent);
+export function SeasonProfile({ member, players, recent, data }) {
+  const ctx = data ? getEditorialContext(data) : null;
+  const profile = buildSeasonProfile(
+    member,
+    players,
+    recent,
+    ctx
+      ? {
+          metrics: ctx.metricsByName.get(member.name.toLowerCase()),
+          club: ctx.club,
+        }
+      : {},
+  );
   const quote = assignQuotes(players.map(toQuotePlayer), 'stagione').get(
     member.name,
   );

@@ -107,12 +107,13 @@ export function Trials({ nightQuotes, nightStats, trials }) {
           <h3>
             Tutti alla sbarra.
             <br />
-            <em>Nessuno alla gogna.</em>
+            <em>Sconti solo oltre l’8.</em>
           </h3>
         </div>
         <p>
           Accusa, prove e verdetto per tutti quelli scesi in campo. L’elogio
-          si merita sopra l’8 di media. Le cifre sono di EA.
+          si merita sopra l’8 di media stagionale, e con un limite sempre
+          indicato; sotto il 6.5 si viene bocciati. Le cifre sono di EA.
         </p>
       </div>
       <div className="paper-trial-grid">

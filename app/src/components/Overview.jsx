@@ -1,10 +1,12 @@
 import { ArrowUpRight, RefreshCw } from 'lucide-react';
+import { clubReading } from '../../../shared/editorial.mjs';
 import { CLUB_ID } from '../lib/constants.js';
+import { getEditorialContext } from '../lib/editorial-ctx.js';
 import { ratio, toNumber } from '../lib/stats.js';
 import { AnalysisRoom } from './AnalysisRoom.jsx';
 import { CountUp } from './CountUp.jsx';
 
-function RecordPanel({ club }) {
+function RecordPanel({ club, reading }) {
   const wins = toNumber(club.wins);
   const ties = toNumber(club.ties);
   const losses = toNumber(club.losses);
@@ -47,15 +49,7 @@ function RecordPanel({ club }) {
           }}
         />
       </div>
-      <p>
-        {Math.round((wins / gamesPlayed) * 100)}
-        {'% di vittorie su '}
-        {gamesPlayed}
-        {' partite. '}
-        {wins > losses
-          ? 'Il bilancio è positivo; la difesa, però, lascia spazio al dramma.'
-          : 'La squadra ha ancora margine per cambiare il bilancio.'}
-      </p>
+      <p>{reading.record}</p>
     </div>
   );
 }
@@ -151,7 +145,7 @@ function FormPanel({ club, matches }) {
   );
 }
 
-function QuickReading({ club }) {
+function QuickReading({ club, reading }) {
   const gamesPlayed = toNumber(club.gamesPlayed);
   return (
     <div className="insight">
@@ -164,11 +158,7 @@ function QuickReading({ club }) {
           {ratio(club.goalsAgainst, gamesPlayed)}
           {' subiti a gara.'}
         </strong>
-        <p>
-          {toNumber(club.goalsAgainst) / gamesPlayed > 2
-            ? "L'attacco produce, ma la difesa concede spesso: c'è quasi sempre bisogno di segnare tanto."
-            : "Bilancio offensivo e difensivo letto sull'intera stagione."}
-        </p>
+        <p>{reading.quick}</p>
       </div>
       <b>
         {Math.round(
@@ -181,7 +171,15 @@ function QuickReading({ club }) {
   );
 }
 
-export function Overview({ club, members, matches, refresh, refreshing }) {
+export function Overview({
+  club,
+  data,
+  members,
+  matches,
+  refresh,
+  refreshing,
+}) {
+  const reading = clubReading(getEditorialContext(data).club);
   return (
     <section className="content" id="panoramica">
       <div className="section-head">
@@ -195,14 +193,19 @@ export function Overview({ club, members, matches, refresh, refreshing }) {
         </button>
       </div>
       <div className="overview">
-        <RecordPanel club={club} />
+        <RecordPanel club={club} reading={reading} />
         <MetricsPanel club={club} />
         <FormPanel club={club} matches={matches} />
       </div>
-      <QuickReading club={club} />
+      <QuickReading club={club} reading={reading} />
       <details className="compact-appendix">
         <summary>La lente sui numeri · andamento e leader</summary>
-        <AnalysisRoom club={club} members={members} matches={matches} />
+        <AnalysisRoom
+          club={club}
+          data={data}
+          members={members}
+          matches={matches}
+        />
       </details>
     </section>
   );

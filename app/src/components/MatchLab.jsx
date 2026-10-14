@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { CLUB_ID } from '../lib/constants.js';
+import { getEditorialContext } from '../lib/editorial-ctx.js';
 import { getClubPlayers, getOpponentName } from '../lib/matches.js';
 import {
   averageRating,
@@ -14,7 +15,8 @@ import { LabTabs } from './match-lab/LabTabs.jsx';
 import { StudioPanel } from './match-lab/StudioPanel.jsx';
 
 /** "Lo spogliatoio": match studio, curva di forma e testa a testa sulle ultime gare. */
-export function MatchLab({ matches }) {
+export function MatchLab({ data, matches }) {
+  const { metricsByName } = getEditorialContext(data);
   const sortedMatches = [...matches].sort(
     (a, b) => toNumber(b.timestamp) - toNumber(a.timestamp),
   );
@@ -145,7 +147,7 @@ export function MatchLab({ matches }) {
     minute: '2-digit',
   });
   async function copySummary() {
-    const text = `BILLOCCHI CLUB ${ownClub.goals}–${ownClub.goalsAgainst} ${getOpponentName(selectedMatch)} · ${dateLabel}\n${outcome}\nMiglior voto Pro: ${topRated?.playername || '—'} (${topRated?.rating || '—'})${mvp ? `\nMVP EA: ${mvp.playername}` : ''}\n${topScorer ? `Bomber: ${topScorer.playername}, ${topScorer.goals} gol\n` : ''}${topAssister ? `Regista: ${topAssister.playername}, ${topAssister.assists} assist\n` : ''}Passaggi dei Pro: ${matchSummary.passes}/${matchSummary.attempts}.\nhttps://billocchi-club.kr3n.chatgpt.site/#spogliatoio`;
+    const text = `BILLOCCHI CLUB ${ownClub.goals}–${ownClub.goalsAgainst} ${getOpponentName(selectedMatch)} · ${dateLabel}\n${outcome}\nMiglior voto Pro: ${topRated?.playername || '—'} (${topRated?.rating || '—'})${mvp ? `\nMVP EA: ${mvp.playername}` : ''}\n${topScorer ? `Più gol: ${topScorer.playername}, ${topScorer.goals}\n` : ''}${topAssister ? `Più assist: ${topAssister.playername}, ${topAssister.assists}\n` : ''}Passaggi dei Pro: ${matchSummary.passes}/${matchSummary.attempts}.\nhttps://billocchi-club.kr3n.chatgpt.site/#spogliatoio`;
     try {
       await navigator.clipboard.writeText(text);
       setCopyStatus('Copiato: pronto per la chat del club.');
@@ -160,8 +162,8 @@ export function MatchLab({ matches }) {
           <span className="overline">EXTRA TIME / LO SPOGLIATOIO</span>
           <h2>La partita dopo la partita.</h2>
           <p className="sub">
-            Chi ha acceso la serata? Chi sta crescendo? Qui i numeri diventano
-            argomenti da chat.
+            Chi ha reso, chi ha pesato in negativo, dove si è perso il pallone.
+            Numeri EA, senza sconti.
           </p>
         </div>
         <span className="lab-live">
@@ -177,7 +179,8 @@ export function MatchLab({ matches }) {
           copySummary={copySummary}
           dateLabel={dateLabel}
           mvp={mvp}
-          matchSummary={matchSummary}
+          matchPlayers={matchPlayers}
+          metricsByName={metricsByName}
           outcome={outcome}
           ownClub={ownClub}
           selectedMatch={selectedMatch}

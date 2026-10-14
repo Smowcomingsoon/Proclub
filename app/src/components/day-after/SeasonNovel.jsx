@@ -14,12 +14,12 @@ function RoleTrendChart({ roleTrend }) {
         </span>
         <strong>
           {roleTrend.delta === null
-            ? 'La storia sta raccogliendo le prime prove.'
+            ? 'Poche gare con voto: nessuna tendenza leggibile.'
             : roleTrend.delta >= 0.3
-              ? 'Il capitolo recente alza il livello.'
+              ? 'Voti in risalita: da confermare nelle prossime gare.'
               : roleTrend.delta <= -0.3
-                ? 'Il capitolo recente chiede una risposta.'
-                : 'Il capitolo recente segue il suo riferimento.'}
+                ? 'Voti in calo: il rendimento recente scende.'
+                : 'Voti stabili: nessun salto, in un senso o nell’altro.'}
         </strong>
       </div>
       {roleTrend.points.length > 0 && (
@@ -57,7 +57,7 @@ function RoleTrendChart({ roleTrend }) {
       <p>
         {roleTrend.delta === null
           ? `${roleTrend.points.length} presenze con voto archiviate nell’ultimo reparto giocato (${roleTrend.role}). Il confronto tra due blocchi parte da quattro presenze con voto nello stesso reparto.`
-          : `Le ultime ${roleTrend.recentCount} presenze archiviate da ${roleTrend.role} valgono ${formatRating(roleTrend.recent)}, contro ${formatRating(roleTrend.previous)} nelle ${roleTrend.previousCount} precedenti: ${roleTrend.delta >= 0 ? '+' : ''}${roleTrend.delta.toFixed(2)} punti EA. Il confronto usa lo stesso reparto.`}
+          : `Le ultime ${roleTrend.recentCount} presenze archiviate da ${roleTrend.role} valgono ${formatRating(roleTrend.recent)}, contro ${formatRating(roleTrend.previous)} nelle ${roleTrend.previousCount} precedenti: ${roleTrend.delta >= 0 ? '+' : ''}${roleTrend.delta.toFixed(2)} punti EA. ${roleTrend.recent < 7 ? 'Resta sotto il 7: ' : roleTrend.recent < 8 ? 'Sotto l’8: ' : ''}${roleTrend.recent < 8 ? 'nessun margine per l’elogio. ' : ''}Il confronto usa lo stesso reparto.`}
       </p>
       {roleTrend.points.length > 1 && (
         <small>
@@ -159,7 +159,7 @@ export function SeasonNovel({
       <div className="paper-section-heading">
         <div>
           <span>03 / IL ROMANZO DEI PRO</span>
-          <h3>La stagione ha memoria.</h3>
+          <h3>La stagione, senza sconti.</h3>
         </div>
         <label>
           Scegli il protagonista

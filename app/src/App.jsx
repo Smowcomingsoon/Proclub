@@ -41,6 +41,7 @@ function App() {
           matches={data.matchHistory || recentMatches}
         />
         <Overview
+          data={data}
           club={club}
           members={sortedMembers}
           matches={recentMatches}
@@ -51,8 +52,8 @@ function App() {
           members={data.members.members}
           matches={data.matchHistory || recentMatches}
         />
-        <Squad members={sortedMembers} matches={recentMatches} />
-        <MatchLab matches={recentMatches} />
+        <Squad data={data} members={sortedMembers} matches={recentMatches} />
+        <MatchLab data={data} matches={recentMatches} />
         <MatchArchive matches={recentMatches} />
       </main>
       <SiteFooter
