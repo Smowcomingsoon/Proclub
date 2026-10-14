@@ -69,5 +69,5 @@ quindi non c'è HTML pre-renderizzato.
 - Le dipendenze del bundle originale non sono state aggiornate: il chunk three.js è
   vendorizzato così com'è (minificato) in `src/vendor/adani-scene.js`.
 - Possibili passi successivi: sostituire il chunk three.js con `three` da npm
-  (ricostruendo la scena dai sorgenti), aggiungere test sui calcoli in `src/lib/`,
+  (ricostruendo la scena dai sorgenti), test sui calcoli in `src/lib/` (`test/app-lib.test.mjs`, eseguiti da `npm test` alla radice),
   prerendering statico per SEO/anteprime.
