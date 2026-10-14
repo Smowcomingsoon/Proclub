@@ -27,7 +27,7 @@ async function ea(endpoint, params) {
   const [club, members, matches] = await Promise.all([
     ea('clubs/overallStats', {platform: PLATFORM, clubIds: CLUB_ID}),
     ea('members/stats', {platform: PLATFORM, clubId: CLUB_ID}),
-    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'leagueMatch', maxResultCount: 5}),
+    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'leagueMatch', maxResultCount: 20}),
   ]);
   validate({club, members, matches}, CLUB_ID);
   const {history, fresh} = mergeHistory(old.matchHistory, matches);
