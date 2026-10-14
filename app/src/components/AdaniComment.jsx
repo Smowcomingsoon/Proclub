@@ -1,20 +1,9 @@
 import { AdaniMini } from './AdaniMini.jsx';
-import { classifyProfile } from '../lib/adani-quotes.js';
+import { adaniNote } from '../lib/adani-quotes.js';
 
 /** Commento "della redazione" con la citazione abbinata e il riepilogo del Pro. */
 export function AdaniComment({ player, quote }) {
-  const summary = player.games
-    ? `${player.name}: ${player.goals} gol e ${player.assists} assist in ${player.games} presenze${player.rating === null ? '' : `, media EA ${player.rating.toFixed(2)}`}. ` +
-      (classifyProfile(player) === 'assist'
-        ? 'La redazione gli dedica l’Adani degli assist: le cifre raccontano il servizio ai compagni.'
-        : classifyProfile(player) === 'goal'
-          ? 'La produzione offensiva dà il tono a questa citazione. La porta avversaria avrà un’opinione diversa.'
-          : classifyProfile(player) === 'duel'
-            ? 'Lavoro e duelli entrano nel fascicolo: non tutto il contributo finisce nella colonna dei gol.'
-            : classifyProfile(player) === 'roast'
-              ? 'Le cifre chiedono una risposta: la battuta punge, il prossimo tabellino può ribattere.'
-              : 'Il rendimento ha materiale per il taccuino. Il prossimo capitolo si scrive in campo.')
-    : 'Aspetta le prime presenze: il taccuino è aperto, la pagella deve ancora nascere.';
+  const summary = adaniNote(player);
   return (
     <aside
       className="adani-comment"

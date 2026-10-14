@@ -57,7 +57,7 @@ function RoleTrendChart({ roleTrend }) {
       <p>
         {roleTrend.delta === null
           ? `${roleTrend.points.length} presenze con voto archiviate nell’ultimo reparto giocato (${roleTrend.role}). Il confronto tra due blocchi parte da quattro presenze con voto nello stesso reparto.`
-          : `Le ultime ${roleTrend.recentCount} presenze archiviate da ${roleTrend.role} valgono ${formatRating(roleTrend.recent)}, contro ${formatRating(roleTrend.previous)} nelle ${roleTrend.previousCount} precedenti: ${roleTrend.delta >= 0 ? '+' : ''}${roleTrend.delta.toFixed(2)} punti EA. ${roleTrend.recent < 7 ? 'Resta sotto il 7: ' : roleTrend.recent < 8 ? 'Sotto l’8: ' : ''}${roleTrend.recent < 8 ? 'nessun margine per l’elogio. ' : ''}Il confronto usa lo stesso reparto.`}
+          : `Le ultime ${roleTrend.recentCount} presenze archiviate da ${roleTrend.role} valgono ${formatRating(roleTrend.recent)}, contro ${formatRating(roleTrend.previous)} nelle ${roleTrend.previousCount} precedenti: ${roleTrend.delta >= 0 ? '+' : ''}${roleTrend.delta.toFixed(2)} punti EA. ${roleTrend.recent < 7 ? 'Livello ancora basso. ' : ''}Il confronto usa lo stesso reparto.`}
       </p>
       {roleTrend.points.length > 1 && (
         <small>

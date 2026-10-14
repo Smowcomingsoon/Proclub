@@ -36,6 +36,6 @@ export function buildSeasonProfile(member, members, recent, ctx = {}) {
     title: novel.title,
     intro: novel.intro,
     sections,
-    note: `Giudizio calcolato sui totali stagionali EA e sulle gare dettagliate disponibili; soglie dei passaggi per ruolo, elogi solo oltre l’8 di media. Non sono disponibili xG, passaggi chiave né posizione media. ${novel.caveats?.length ? novel.caveats.join(' ') : ''}`.trim(),
+    note: `Giudizio calcolato sui totali stagionali EA e sulle gare dettagliate disponibili; i passaggi sono letti in base al ruolo. Non sono disponibili xG, passaggi chiave né posizione media. ${novel.caveats?.length ? novel.caveats.join(' ') : ''}`.trim(),
   };
 }

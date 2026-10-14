@@ -280,8 +280,7 @@ export function StudioPanel({
       />
       <p className="lab-note">
         I riconoscimenti sono assegnati automaticamente dai dati della gara; in
-        parità decide il voto EA, e sotto l’8 non sono elogi. Le soglie dei
-        passaggi dipendono dal ruolo. I passaggi e i tiri riguardano solo i Pro registrati,
+        parità decide il voto EA. I passaggi e i tiri riguardano solo i Pro registrati,
         non l’intera squadra. Conversione = gol/tiri, non precisione nello
         specchio. Nessuna cronaca minuto per minuto è disponibile.
       </p>

@@ -31,7 +31,7 @@ function negatives(m) {
   if (m.rating) {
     if (m.rating < 6.5) add(10, 'rating', pick(m, [
       `Media EA ${f2(m.rating)} in ${g} presenze: insufficiente. Per un ${rl} titolare è un rendimento sotto il minimo accettabile.`,
-      `${f2(m.rating)} di media EA: bocciatura netta. Un ${rl} che resta sotto il 6.5 non sta sostenendo la squadra.`]), `Media EA ${f2(m.rating)} in ${g} presenze`);
+      `${f2(m.rating)} di media EA: bocciatura netta. Un ${rl} fermo a questi livelli non sta sostenendo la squadra.`]), `Media EA ${f2(m.rating)} in ${g} presenze`);
     else if (m.rating < 7) add(7, 'rating', `Media EA ${f2(m.rating)}: appena oltre la sufficienza. Da ${rl} significa tenere il posto senza mai spostare l'inerzia della gara.`, `Media EA ${f2(m.rating)}`);
     else if (m.rating < 7.5) add(4, 'rating', m.peers && m.peers.ratingRank
       ? `Media EA ${f2(m.rating)}: ${m.peers.ratingRank}° su ${m.peers.n} del reparto (mediana ${f2(m.peers.medianRating)}). Rendimento ordinario per un ${rl}, utile ma non determinante.`
@@ -41,30 +41,30 @@ function negatives(m) {
   if (m.peers && m.peers.ratingRank === m.peers.n && g >= 8) add(7, 'peers', `Ultimo dei ${m.peers.n} del reparto per media EA (${f2(m.rating)} contro mediana ${f2(m.peers.medianRating)}): a pari ruolo il club ha alternative migliori.`, `Ultimo su ${m.peers.n} pari reparto per media (${f2(m.rating)}, mediana ${f2(m.peers.medianRating)})`);
   else if (m.ratingVsClubMedian != null && m.ratingVsClubMedian <= -0.4 && g >= 8) add(7, 'peers', `${f1(Math.abs(m.ratingVsClubMedian))} punti sotto la mediana dei titolari del club: qualcuno, a parità di impiego, rende di più.`, `${f2(m.ratingVsClubMedian)} dalla mediana del club`);
 
-  // --- Passaggi: soglia dipendente dal ruolo
+  // --- Passaggi: parametro dipendente dal ruolo
   const pp = m.passPct;
   if (pp != null) {
     const failed = m.passFailedPerGame, att = m.passAttPerGame;
     const vol = att != null ? ` su circa ${r0(att)} tentati a gara` : '';
-    const proofP = `${r0(pp)}% passaggi${failed != null ? `, ~${f1(failed)} sbagliati a gara` : ''} (soglia ${R.passMin}% per ${rl})`;
+    const proofP = `${r0(pp)}% passaggi${failed != null ? `, ~${f1(failed)} sbagliati a gara` : ''}`;
     if (cons && pp < R.passMin) {
       const coachByRole = {
-        DIF: `Costruzione dal basso: appoggio sul compagno più vicino e nessun lancio forzato finché non risali oltre l'80% (oggi ${r0(pp)}%, ~${f1(failed)} possessi persi a gara).`,
-        MED: `Da mediano il primo passaggio dopo il recupero deve essere sicuro: gioca corto verso il centrocampista libero, obiettivo 80%+ (oggi ${r0(pp)}%).`,
+        DIF: `Costruzione dal basso: appoggio sul compagno più vicino e nessun lancio forzato finché i possessi persi non calano (oggi ${r0(pp)}%, ~${f1(failed)} possessi persi a gara).`,
+        MED: `Da mediano il primo passaggio dopo il recupero deve essere sicuro: gioca corto verso il centrocampista libero, il dato di oggi è ${r0(pp)}%.`,
         POR: `Rimessa e rinvio sul compagno libero, niente lanci a caso: ${r0(pp)}% non basta al portiere.`,
         CC: `Da centrale uscita dal pressing con passaggi semplici e a un tocco, senza verticali forzate: ${r0(pp)}% oggi, ~${f1(failed)} palloni regalati a gara.`,
       };
       add(pp < 70 ? 10 : 9, 'pass', pick(m, [
-        `Passaggi al ${r0(pp)}%${vol}: per un ${rl} è sotto la soglia del 75%, perché i suoi sono i passaggi più semplici del campo. Non è un alibi di ruolo, è un limite tecnico.`,
-        `${r0(pp)}% di passaggi riusciti da ${rl}: sotto il 75% che il ruolo impone, perché i suoi passaggi sono di norma meno rischiosi di quelli di chi gioca tra le linee. Regala possesso${failed != null ? ` (~${f1(failed)} errori a gara)` : ''}.`]), proofP, coachByRole[R.role] || coachByRole.CC);
+        `Passaggi al ${r0(pp)}%${vol}: per un ${rl}, che gioca i passaggi più semplici del campo, è un dato troppo basso. Non è un alibi di ruolo, è un limite tecnico.`,
+        `${r0(pp)}% di passaggi riusciti da ${rl}: un dato che non può permettersi: i suoi passaggi sono di norma meno rischiosi di quelli di chi gioca tra le linee. Regala possesso${failed != null ? ` (~${f1(failed)} errori a gara)` : ''}.`]), proofP, coachByRole[R.role] || coachByRole.CC);
     } else if (!cons && pp < R.passMin) {
       const coachOff = R.role === 'ATT'
         ? `Quando ricevi spalle alla porta scarica di prima su chi inserisce, non forzare il filtrante: ${r0(pp)}% è troppo basso anche per una punta.`
         : `Nell'ultimo terzo scegli il passaggio che mantiene il possesso: ${r0(pp)}% è troppo basso persino per chi gioca tra le linee.`;
-      add(R.role === 'ATT' ? 7 : 8, 'pass', `Passaggi al ${r0(pp)}%${vol}: anche con la tolleranza dovuta a un ${rl} (passaggi in area e tra linee strette) siamo sotto il minimo del ${R.passMin}%.`, proofP, coachOff);
+      add(R.role === 'ATT' ? 7 : 8, 'pass', `Passaggi al ${r0(pp)}%${vol}: anche con la tolleranza dovuta a un ${rl} (passaggi in area e tra linee strette) il dato resta comunque basso.`, proofP, coachOff);
     } else if (cons && pp < 80 && att != null && att >= 25) {
       add(4, 'pass', `${r0(pp)}% di passaggi su ~${r0(att)} a gara: il volume c'è, la pulizia è solo sufficiente per un ${rl}.`, `${r0(pp)}% su ~${r0(att)} passaggi a gara`,
-        `Con ~${r0(att)} passaggi a gara il margine è nella scelta: ~${f1(Math.max(0.1, failed - att * 0.2))} errori in meno a partita portano il ${r0(pp)}% all'80%.`);
+        `Con ~${r0(att)} passaggi a gara il margine è nella scelta: ~${f1(Math.max(0.1, failed - att * 0.2))} errori in meno a partita migliorerebbero sensibilmente il ${r0(pp)}% attuale.`);
     }
     if (m.recentPassPct != null && pp - m.recentPassPct >= 5 && (m.sample || 0) >= 6 && !(cons && pp < R.passMin)) add(5, 'pass2', `Precisione in calo: ${r0(m.recentPassPct)}% nelle ultime ${m.sample} gare contro ${r0(pp)}% di stagione.`, `Ultime ${m.sample} gare ${r0(m.recentPassPct)}% contro stagione ${r0(pp)}%`, `Ritrovare la pulizia di inizio stagione: ${r0(m.recentPassPct)}% nelle ultime ${m.sample} contro ${r0(pp)}%.`);
     if (m.worstPassPct != null && m.worstPassPct < (cons ? 60 : 50) && (m.sample || 0) >= 6) add(4, 'pass2', `Una serata nera al passaggio: ${r0(m.worstPassPct)}% nella peggiore gara, il segno di quando perde il filo.`, `Peggior gara ${r0(m.worstPassPct)}% passaggi`);
@@ -88,8 +88,8 @@ function negatives(m) {
   if (R.role === 'ATT' && (m.sample || 0) >= 6 && m.shotsPerGame != null && m.shotsPerGame < 2.5) add(5, 'finish', `${f1(m.shotsPerGame)} tiri a gara per un attaccante: non si prende la conclusione.`, `${f1(m.shotsPerGame)} tiri a gara`, `Attacca l'area con più continuità: ${f1(m.shotsPerGame)} tiri a gara sono pochi per la punta.`);
   const gaMin = GA_MIN[R.role];
   if (gaMin && g >= 8 && m.gaPerGame != null && m.gaPerGame < gaMin) add(6, 'output', pick(m, [
-    `Gol più assist: ${f2(m.gaPerGame)} a gara. Per un ${rl} la soglia di lavoro è ${gaMin}: l'incidenza offensiva è insufficiente.`,
-    `${m.goals} gol e ${m.assists} assist in ${g} gare (${f2(m.gaPerGame)} a gara): troppo poco per il peso offensivo che il ruolo richiede.`]), `${f2(m.gaPerGame)} G+A a gara (soglia ${gaMin} per ${rl})`,
+    `Gol più assist: ${f2(m.gaPerGame)} a gara. Per un ${rl} è un'incidenza offensiva insufficiente.`,
+    `${m.goals} gol e ${m.assists} assist in ${g} gare (${f2(m.gaPerGame)} a gara): troppo poco per il peso offensivo che il ruolo richiede.`]), `${f2(m.gaPerGame)} G+A a gara`,
     `Più presenza tra le linee e inserimenti senza palla: ${m.goals} gol e ${m.assists} assist in ${g} gare non bastano per un ${rl}.`);
   if (R.group === 'off' && m.dryStreak >= 3) add(6, 'streak', `${m.dryStreak} gare consecutive senza incidere nel tabellino.`, `${m.dryStreak} gare a secco`);
   if (R.group === 'off' && m.blankShare != null && m.blankShare >= 60 && (m.sample || 0) >= 6) add(5, 'streak', `Nel ${r0(m.blankShare)}% delle ultime ${m.sample} gare non fa né gol né assist.`, `${r0(m.blankShare)}% gare senza G/A`);
@@ -97,7 +97,7 @@ function negatives(m) {
 
   // --- Costanza e forma
   if (stable && m.ratingStd != null && m.ratingStd >= 0.8) add(5, 'consistency', `Rendimento altalenante: deviazione ${f2(m.ratingStd)} sul voto, tra ${f1(m.ratingMin)} e ${f1(m.ratingMax)} nelle gare con almeno 45'.`, `Voto tra ${f1(m.ratingMin)} e ${f1(m.ratingMax)}, dev. ${f2(m.ratingStd)}`);
-  if (stable && m.below65Share != null && m.below65Share >= 25) add(7, 'consistency', `${m.below65} partite su ${m.ratedGames} sotto il 6.5: non è un incidente isolato.`, `${m.below65}/${m.ratedGames} gare sotto 6.5`);
+  if (stable && m.below65Share != null && m.below65Share >= 25) add(7, 'consistency', `${m.below65} partite su ${m.ratedGames} chiuse con voto insufficiente: non è un incidente isolato.`, `${m.below65}/${m.ratedGames} gare insufficienti`);
   if (stable && m.ratedGames >= 8 && m.form5 != null && m.formBefore != null && m.form5 <= m.formBefore - 0.4) add(6, 'form', `Forma in discesa: ${f2(m.form5)} nelle ultime 5 contro ${f2(m.formBefore)} prima.`, `Ultime 5: ${f2(m.form5)} contro ${f2(m.formBefore)}`);
   else if (stable && m.formVsSeason != null && m.formVsSeason <= -0.5) add(5, 'form', `Sotto il proprio livello: ${f2(m.form5)} nelle ultime 5 contro ${f2(m.rating)} di media stagionale.`, `Ultime 5: ${f2(m.form5)} contro stagione ${f2(m.rating)}`);
   else if (stable && m.ratedGames >= 8 && m.trend != null && m.trend < -0.1) add(4, 'form', `La curva dei voti scende di ${f2(Math.abs(m.trend))} a partita nelle ultime ${m.ratedGames} gare.`, `Pendenza voti ${f2(m.trend)}`);
@@ -230,7 +230,7 @@ export function commentFor(m) {
   if (m.rating < 6.5) verdict = 'Bocciato: oggi non è all\'altezza del livello richiesto dal club.';
   else if (m.rating < 7) verdict = 'Rimandato: la sufficienza non basta, servono precisione e incidenza.';
   else if (m.rating < 7.5) verdict = 'Nella media: utile, mai decisivo. Migliorare è l\'unica strada.';
-  else if (m.rating <= 8) verdict = 'Buono ma non da elogio: l\'elogio scatta solo oltre l\'8 di media EA.';
+  else if (m.rating <= 8) verdict = 'Buono, ma ancora lontano dai migliori: manca il salto di qualità.';
   else verdict = 'Promosso: livello alto, da confermare partita dopo partita.';
   if (confidence === 'ridotta') verdict += ` Lettura provvisoria: ${g} presenze.`;
 

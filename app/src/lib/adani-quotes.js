@@ -223,3 +223,71 @@ export function toQuotePlayer(member) {
     tackles: count(member.tacklesMade),
   };
 }
+
+/**
+ * Commento della redazione sotto la citazione: critico, basato sui dati del Pro
+ * (gol, assist, voto, passaggi), senza spiegare criteri e senza elogi dove i numeri non li reggono.
+ */
+export function adaniNote(player) {
+  if (!player.games)
+    return 'Nessuna presenza: nulla da giudicare, per ora la citazione resta sola.';
+  const pick = (options) => options[hashString(player.name) % options.length];
+  const { name, goals, assists, games } = player;
+  const r = player.rating === null ? null : player.rating.toFixed(2);
+  const high = player.rating !== null && player.rating > 8;
+  const line = `${name}: ${goals} gol e ${assists} assist in ${games} ${games === 1 ? 'presenza' : 'presenze'}${r ? `, media EA ${r}` : ''}.`;
+  const pass =
+    player.passPct && player.passPct > 0 ? `${player.passPct}% di passaggi` : '';
+  switch (classifyProfile(player)) {
+    case 'roast':
+      return `${line} ${pick([
+        `Con questi numeri la battuta di Adani pesa meno del rendimento${pass ? `: ${pass}` : ''}.`,
+        `La citazione strappa un sorriso, il rendimento no${pass ? ` (${pass})` : ''}.`,
+        `Il tono è quello giusto per una prestazione che non regge${pass ? `: ${pass}` : ''}.`,
+      ])}`;
+    case 'assist':
+      return `${line} ${pick(
+        high
+          ? [
+              'Il servizio ai compagni è di livello alto; resta da limare la costanza.',
+              'La rifinitura regge il confronto, ma una citazione di Adani non copre i cali.',
+            ]
+          : [
+              'Serve i compagni, ma il resto del rendimento resta ordinario.',
+              'La regia c’è a tratti: il voto medio dice che non basta a fare la differenza.',
+              'Gli assist sono il suo contributo, non ancora un peso reale sulle partite.',
+            ],
+      )}`;
+    case 'goal':
+      return `${line} ${pick(
+        high
+          ? [
+              'La porta la trova con continuità e il voto lo conferma, con qualche limite fuori dall’area.',
+              'Il gol è il suo mestiere e il rendimento regge, ma la citazione è più alta dei suoi difetti.',
+            ]
+          : [
+              'La porta la trova, fuori dall’area si vede poco.',
+              'Il gol non basta: il voto medio racconta una partita fatta a metà.',
+              'Segna, ma la media dice che il resto del lavoro non tiene il passo.',
+            ],
+      )}`;
+    case 'duel':
+      return `${line} ${pick([
+        'Più lavoro che incisività: il sacrificio non si traduce ancora in numeri.',
+        'Corre e contrasta, ma il tabellino resta quasi vuoto.',
+      ])}`;
+    default:
+      return `${line} ${pick(
+        high
+          ? [
+              'Rendimento alto, con difetti che restano da correggere.',
+              'Numeri solidi, ma una citazione non sostituisce la continuità.',
+            ]
+          : [
+              'Rendimento senza picchi: la citazione è più alta dei numeri.',
+              'Nulla di brillante nei dati: per ora un contributo ordinario.',
+              'Il voto medio racconta un giocatore normale, non un protagonista.',
+            ],
+      )}`;
+  }
+}
