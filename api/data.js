@@ -28,9 +28,12 @@ module.exports = async (req, res) => {
     const fresh = matches.filter(m => !seen.has(String(m.matchId)));
     const matchHistory = [...fresh, ...stored.matchHistory].sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_HISTORY);
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    res.setHeader('X-Data-Source', 'live');
     res.status(200).send(JSON.stringify({club, members, matches, matchHistory, capturedAt: new Date().toISOString(), fresh: []}));
   } catch (err) {
     res.setHeader('Cache-Control', 's-maxage=30');
+    res.setHeader('X-Data-Source', 'snapshot');
+    res.setHeader('X-Data-Error', String(err.message).replace(/[^\x20-\x7e]/g, '').slice(0, 120));
     res.status(200).send(JSON.stringify(stored));
   }
 };
