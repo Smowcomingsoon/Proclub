@@ -47,6 +47,8 @@
   .paper-nav a { min-width: 44px; }
 
 
+  .pg-table tbody th a { display: inline-flex; align-items: center; min-height: 44px; }
+
   /* tabelle: prima colonna ferma, meno spazio, didascalia leggibile */
   .grades-table { min-width: 600px; }
   .lab-table { min-width: 600px; font-size: 15px; }
