@@ -1,1 +1,1 @@
-{"name":"billocchi-club","private":true,"scripts":{"test":"node --test test/*.test.js","update":"node scripts/update-data.js"},"engines":{"node":">=20"}}
+{"name":"billocchi-club","private":true,"scripts":{"test":"node --test test/*.test.js test/*.test.mjs","update":"node scripts/update-data.js"},"engines":{"node":">=20"}}
