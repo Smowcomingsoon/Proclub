@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%"><stop stop-color="#183a27"/><stop offset=".68" stop-color="#0b1c15"/><stop offset="1" stop-color="#07120f"/></radialGradient>
+    <linearGradient id="shield" x1="0" x2="1" y2="1"><stop stop-color="#e3ff95"/><stop offset=".5" stop-color="#d2fb6a"/><stop offset="1" stop-color="#94cf48"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="23"/></filter>
+    <clipPath id="round"><circle cx="512" cy="512" r="478"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="#07120f"/>
+  <g clip-path="url(#round)">
+    <circle cx="512" cy="512" r="478" fill="url(#bg)"/>
+    <g opacity=".13" fill="none" stroke="#b6e59b" stroke-width="8" transform="rotate(-19 512 512)">
+      <rect x="65" y="255" width="894" height="515"/>
+      <path d="M65 512h894"/><circle cx="512" cy="512" r="114"/>
+      <path d="M370 255v90h284v-90M370 770v-90h284v90"/>
+    </g>
+    <circle cx="512" cy="512" r="433" fill="none" stroke="#53784c" stroke-width="3"/>
+    <circle cx="512" cy="512" r="411" fill="none" stroke="#d2fb6a" stroke-width="5"/>
+    <path d="M512 148 787 242v356c0 150-108 231-275 305-167-74-275-155-275-305V242z" fill="#b6fa67" opacity=".24" filter="url(#glow)"/>
+    <path d="M512 160 777 250v343c0 142-105 218-265 289-160-71-265-147-265-289V250z" fill="url(#shield)"/>
+    <path d="M512 196 739 273v313c0 115-85 178-227 244-142-66-227-129-227-244V273z" fill="#0c2118"/>
+    <path d="M512 226 711 294v284c0 102-73 159-199 218-126-59-199-116-199-218V294z" fill="none" stroke="#6d9f4b" stroke-width="3"/>
+    <path d="M340 369h344M512 313v87" stroke="#d2fb6a" stroke-width="7" opacity=".75"/>
+    <circle cx="512" cy="368" r="18" fill="#d2fb6a"/>
+    <text x="512" y="613" text-anchor="middle" fill="#d2fb6a" font-family="'Barlow Condensed',Impact,'Arial Narrow',sans-serif" font-weight="900" font-stretch="condensed" font-size="268" letter-spacing="-23">BC</text>
+    <path d="M373 648h278" stroke="#d2fb6a" stroke-width="7"/>
+    <text x="512" y="704" text-anchor="middle" fill="#f6f6e9" font-family="Arial,sans-serif" font-size="37" font-weight="900" letter-spacing="7">BILLOCCHI</text>
+    <text x="512" y="747" text-anchor="middle" fill="#d2fb6a" font-family="Arial,sans-serif" font-size="28" font-weight="800" letter-spacing="15">CLUB</text>
+  </g>
+  <circle cx="512" cy="512" r="478" fill="none" stroke="#d2fb6a" stroke-width="13"/>
+</svg>
