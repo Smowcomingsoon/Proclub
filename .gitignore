@@ -1,2 +1,5 @@
 node_modules/
 .env
+app/dist/
+app/public/data.json
+app/public/archive.json

@@ -36,7 +36,6 @@ async function ea(endpoint, params) {
   if (!changed) return console.log('Nessuna novità.');
   next.capturedAt = new Date().toISOString();
   fs.writeFileSync(FILE, JSON.stringify(next));
-  fs.copyFileSync(FILE, path.join(ROOT, 'site', 'data.json'));
   archiveMatches(path.join(ROOT, 'data', 'archive'), history, CLUB_ID);
   console.log(`Aggiornato: ${fresh.length} nuove partite.`);
   await notify(fresh, CLUB_ID);
