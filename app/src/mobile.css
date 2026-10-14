@@ -13,7 +13,7 @@
 .dialog-close { min-width: 44px; min-height: 44px; line-height: 1; }
 
 @media (max-width: 700px) {
-  .section-navigation a { min-height: 44px; min-width: 44px; justify-content: center; }
+  .section-navigation a { min-height: 44px; min-width: 44px; justify-content: center; flex: none; white-space: nowrap; }
   .section-navigation { padding: 0 0 4px; }
   .brand { min-height: 44px; }
   .day-after select,
