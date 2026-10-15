@@ -350,7 +350,6 @@ export function analyzeClub(data, clubId = CLUB_ID, precomputed) {
   const lines = [];
   if (n) lines.push(`Ultime ${n} gare: ${record.w}V ${record.d}P ${record.l}S, ${record.gf}-${record.ga} (${record.ppg.toFixed(2)} punti a gara); ${record.cleanSheets} porte inviolate e ${record.conceded3plus} gare con 3 o più gol subiti.`);
   if (season.games) lines.push(`Stagione EA: ${season.gfPerGame.toFixed(2)} gol fatti e ${season.gaPerGame.toFixed(2)} subiti a gara in ${season.games} partite.`);
-  if (n && missingFamilies.length) lines.push(`Nelle ${n} gare disponibili nessun Pro è schierato come ${missingFamilies.map(f => f === 'dif' ? 'difensore' : 'portiere').join(' né come ')} (campo pos): la fase difensiva è tutta sulle spalle di centrocampisti e punta.`);
   if (weakestUnit) lines.push(`Reparto con la media più bassa: ${dif(weakestUnit.family)} (${weakestUnit.rating.toFixed(2)} di media pesata sulle presenze).`);
   if (weakestPlayer) lines.push(`Anello debole tra i titolari (≥8 presenze): ${weakestPlayer.name}, media ${weakestPlayer.rating.toFixed(1)}.`);
   if (bestPairs[0]) lines.push(`Con ${bestPairs[0].a} e ${bestPairs[0].b} insieme il club ha totalizzato ${bestPairs[0].ppg.toFixed(2)} punti a gara in ${bestPairs[0].n} gare, ${bestPairs[0].ppgRest.toFixed(2)} nelle ${bestPairs[0].nRest} senza la coppia.`);
