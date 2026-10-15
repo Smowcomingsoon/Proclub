@@ -127,7 +127,7 @@ function coverDeck(p, craft, rec, seasonRating, seed) {
 function coverClosing(rec, tp, seed) {
   const n = rec.games, concedes = rec.against >= n * 1.5;
   if (rec.wins > rec.losses) {
-    if (concedes) return choose(seed, ['Si vince, ma la difesa continua a concedere troppo.', 'Il risultato sorride, la tenuta no: dietro si balla.', 'Tre punti che nascondono una difesa ancora fragile.']);
+    if (concedes) return choose(seed, ['Si vince, ma la difesa continua a concedere troppo.', 'Il risultato c’è, la tenuta no: dietro si balla.', 'Tre punti che nascondono una difesa ancora fragile.']);
     if (tp.att >= 30 && tp.pct != null && tp.pct < 80) return choose(seed, ['Si vince, ma si regalano troppi palloni.', 'Il risultato c’è, la pulizia nel palleggio no.']);
     return choose(seed, ['Un bilancio in ordine: ora serve ripeterlo.', 'Serata a posto sul campo, da confermare alla prossima.']);
   }
