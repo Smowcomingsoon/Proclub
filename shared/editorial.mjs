@@ -418,8 +418,7 @@ export function clubReading(club) {
   const quick = [];
   quick.push(s.gaPerGame > 2 ? `Con ${f2(s.gaPerGame)} gol subiti a gara il club vive dei gol che segna.` : `${f2(s.gaPerGame)} gol subiti a gara: accettabile, ma lontano da una difesa che chiude le partite.`);
   if (club.dependence && fin(club.dependence.share)) quick.push(`${club.dependence.name} firma ${ilp(club.dependence.share)} dei gol stagionali (${club.dependence.goals} su ${s.gf}): una quota molto alta sul totale.`);
-  if (club.missingFamilies && club.missingFamilies.length) quick.push(`Nelle ultime ${r.n} gare nessun Pro gioca da ${club.missingFamilies.map(f => (f === 'dif' ? 'difensore' : 'portiere')).join(' né da ')}.`);
-  else if (club.weakestPlayer) quick.push(`L'anello debole tra i titolari è ${club.weakestPlayer.name} (media ${f2(club.weakestPlayer.rating)}).`);
+  if (club.weakestPlayer) quick.push(`L'anello debole tra i titolari è ${club.weakestPlayer.name} (media ${f2(club.weakestPlayer.rating)}).`);
   return {record, quick: quick.join(' ')};
 }
 
