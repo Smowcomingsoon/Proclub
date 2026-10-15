@@ -24,11 +24,14 @@ async function ea(endpoint, params) {
 
 (async () => {
   const old = JSON.parse(fs.readFileSync(FILE, 'utf8'));
-  const [club, members, matches] = await Promise.all([
+  const [club, members, leagueMatches, friendlyMatches, playoffMatches] = await Promise.all([
     ea('clubs/overallStats', {platform: PLATFORM, clubIds: CLUB_ID}),
     ea('members/stats', {platform: PLATFORM, clubId: CLUB_ID}),
-    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'leagueMatch', maxResultCount: 20}),
+    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'leagueMatch', maxResultCount: 10}),
+    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'friendlyMatch', maxResultCount: 10}).catch(e => { console.warn('Amichevoli non disponibili:', e.message); return []; }),
+    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'playoffMatch', maxResultCount: 10}).catch(e => { console.warn('Playoff non disponibili:', e.message); return []; }),
   ]);
+  const matches = [...new Map([...leagueMatches.map(m => ({...m, sourceMatchType: 'leagueMatch'})), ...friendlyMatches.map(m => ({...m, sourceMatchType: 'friendlyMatch'})), ...playoffMatches.map(m => ({...m, sourceMatchType: 'playoffMatch'}))].map(m => [String(m.matchId), m])).values()].sort((a, b) => b.timestamp - a.timestamp);
   validate({club, members, matches}, CLUB_ID);
   const {history, fresh} = mergeHistory(old.matchHistory, matches);
   const next = {club, members, matches, matchHistory: history, capturedAt: old.capturedAt, fresh: []};
