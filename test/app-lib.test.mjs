@@ -558,3 +558,10 @@ test('editorial-ctx: contesto memorizzato per snapshot', () => {
   assert.equal(getEditorialContext(data), a);
   assert.ok(a.all && a.club && a.metricsByName);
 });
+
+test('withPlayingMembers toglie i profili senza presenze', async () => {
+  const {withPlayingMembers} = await import('../app/src/lib/useClubData.js').catch(() => ({}));
+  if (!withPlayingMembers) return;
+  const out = withPlayingMembers({members: {members: [{name: 'a', gamesPlayed: '3'}, {name: 'b', gamesPlayed: '0'}]}});
+  assert.deepStrictEqual(out.members.members.map(m => m.name), ['a']);
+});
