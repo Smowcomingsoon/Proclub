@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/update-data.yml'
+      - 'scripts/update-data.js'
   schedule:
     - cron: '17 4 * * *'
   workflow_dispatch:
