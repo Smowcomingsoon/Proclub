@@ -126,7 +126,7 @@ test('analyzeClub: coppie calcolate dalle partite, insight di squadra', () => {
 });
 
 test('nessun testo di squadra segnala difensori o portieri assenti (sono bot)', async () => {
-  const {analyzeClub} = await import('../shared/commentary.mjs');
+  const {analyzeClub} = await import('../shared/metrics.mjs');
   const text = analyzeClub(data).lines.join(' ');
   assert.doesNotMatch(text, /nessun Pro/i);
 });
