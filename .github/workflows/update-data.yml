@@ -5,7 +5,7 @@ on:
       - '.github/workflows/update-data.yml'
       - 'scripts/update-data.js'
   schedule:
-    - cron: '17 4 * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -14,17 +14,15 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: node scripts/update-data.js
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
       - name: Commit se cambiato
+        if: ${{ always() }}
         run: |
           git config user.name "billocchi-bot"
           git config user.email "billocchi-bot@users.noreply.github.com"

@@ -24,22 +24,31 @@ async function ea(endpoint, params) {
 
 (async () => {
   const old = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+  const failures = {};
+  const optional = (mode) => (error) => { failures[mode] = error.message; console.warn(`${mode} non disponibile:`, error.message); return []; };
   const [club, members, leagueMatches, friendlyMatches, playoffMatches] = await Promise.all([
     ea('clubs/overallStats', {platform: PLATFORM, clubIds: CLUB_ID}),
     ea('members/stats', {platform: PLATFORM, clubId: CLUB_ID}),
     ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'leagueMatch', maxResultCount: 10}),
-    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'friendlyMatch', maxResultCount: 10}).catch(e => { console.warn('Amichevoli non disponibili:', e.message); return []; }),
-    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'playoffMatch', maxResultCount: 10}).catch(e => { console.warn('Playoff non disponibili:', e.message); return []; }),
+    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'friendlyMatch', maxResultCount: 10}).catch(optional('friendlyMatch')),
+    ea('clubs/matches', {platform: PLATFORM, clubIds: CLUB_ID, matchType: 'playoffMatch', maxResultCount: 10}).catch(optional('playoffMatch')),
   ]);
   const matches = [...new Map([...leagueMatches.map(m => ({...m, sourceMatchType: 'leagueMatch'})), ...friendlyMatches.map(m => ({...m, sourceMatchType: 'friendlyMatch'})), ...playoffMatches.map(m => ({...m, sourceMatchType: 'playoffMatch'}))].map(m => [String(m.matchId), m])).values()].sort((a, b) => b.timestamp - a.timestamp);
   validate({club, members, matches}, CLUB_ID);
   const {history, fresh} = mergeHistory(old.matchHistory, matches);
   const next = {club, members, matches, matchHistory: history, capturedAt: old.capturedAt, fresh: []};
   const changed = JSON.stringify({...next, capturedAt: 0}) !== JSON.stringify({...old, capturedAt: 0});
-  if (!changed) return console.log('Nessuna novità.');
+  const checkedAt = new Date().toISOString();
+  fs.writeFileSync(path.join(ROOT, 'data', 'sync-status.json'), JSON.stringify({checkedAt, complete: !Object.keys(failures).length, failures}));
+  if (!changed) {
+    console.log('Nessuna novità.');
+    if (Object.keys(failures).length) throw new Error('Raccolta parziale: ' + Object.keys(failures).join(', '));
+    return;
+  }
   next.capturedAt = new Date().toISOString();
   fs.writeFileSync(FILE, JSON.stringify(next));
   archiveMatches(path.join(ROOT, 'data', 'archive'), history, CLUB_ID);
   console.log(`Aggiornato: ${fresh.length} nuove partite.`);
   await notify(fresh, CLUB_ID);
+  if (Object.keys(failures).length) throw new Error('Raccolta parziale: ' + Object.keys(failures).join(', '));
 })().catch(e => { console.error(e.message); process.exit(1); });
